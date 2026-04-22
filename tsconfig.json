@@ -1,16 +1,14 @@
 {
-    "compilerOptions": {
-        "module": "ESNext",
-        "moduleResolution": "Bundler",
-        "target": "ESNext",
-        "strict": true,
-        "esModuleInterop": false,
-        "skipLibCheck": true,
-        "forceConsistentCasingInFileNames": true,
-        "isolatedModules": true,
-        "noEmit": true
-    },
-    "include": [
-        "*.ts"
-    ]
+  "compilerOptions": {
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "target": "ESNext",
+    "strict": true,
+    "esModuleInterop": false,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "isolatedModules": true,
+    "noEmit": true
+  },
+  "include": ["*.ts"]
 }
