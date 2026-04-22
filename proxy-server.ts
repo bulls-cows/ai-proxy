@@ -35,7 +35,7 @@ const shouldRetry = (
 }
 
 // 核心代理逻辑
-app.all('*', async (req: Request, res: Response) => {
+app.all('{*path}', async (req: Request, res: Response) => {
   const path = req.originalUrl
   const targetUrl = `${CONFIG.targetBaseUrl}${path}`
   let attempt = 0
