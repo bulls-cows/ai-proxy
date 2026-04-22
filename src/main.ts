@@ -1,19 +1,6 @@
 import express, { type Request, type Response } from 'express'
 import axios, { type AxiosRequestConfig, type AxiosResponse } from 'axios'
-
-const CONFIG = {
-  localPort: parseInt(process.env.LOCAL_PORT || '1050', 10),
-  targetBaseUrl: process.env.TARGET_BASE_URL || 'https://你的-coding-plan-接口地址.com',
-  retry: {
-    maxRetries: parseInt(process.env.MAX_RETRIES || '5', 10),
-    delayMs: parseInt(process.env.DELAY_MS || '2000', 10),
-    retryStatusCodes: (process.env.RETRY_STATUS_CODES || '429,500,502,503,504')
-      .split(',')
-      .map(code => parseInt(code.trim(), 10)),
-  },
-}
-
-type RetryConfig = typeof CONFIG.retry
+import { CONFIG } from './scripts/ConstantUtils.js'
 
 const app = express()
 app.use(express.json())
