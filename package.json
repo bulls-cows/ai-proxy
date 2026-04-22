@@ -1,0 +1,20 @@
+{
+  "name": "retry-model-request",
+  "version": "1.0.0",
+  "description": "对 coding plan、token plan 的反向代理，在供应商接口报错时自动重试，避免客户端由于报错而中断执行任务。",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/bulls-cows/retry-model-request.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "Apache-2.0",
+  "bugs": {
+    "url": "https://github.com/bulls-cows/retry-model-request/issues"
+  },
+  "homepage": "https://github.com/bulls-cows/retry-model-request#readme"
+}
