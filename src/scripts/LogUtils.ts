@@ -2,7 +2,7 @@ import { createLogger, joinPath } from 'nsuite'
 import { PATH_LOGS, NODE_ENV, DEBUG, LOCAL_PORT, APP_NAME } from '#scripts/ConstantUtils.ts'
 
 export const logger = createLogger({
-  level: DEBUG === '1' ? 'debug' : NODE_ENV === 'development' ? 'info' : 'warn',
+  level: DEBUG === '1' ? 'debug' : 'info',
   meta: {
     server: APP_NAME || 'Unknown Server',
     PORT: String(LOCAL_PORT),
