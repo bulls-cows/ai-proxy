@@ -50,9 +50,5 @@
       "timestampUrl": ""
     }
   },
-  "plugins": {
-    "autostart": {
-      "macOSConfig": null
-    }
-  }
+  "plugins": {}
 }
