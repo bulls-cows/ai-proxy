@@ -1,29 +1,15 @@
 <template>
   <div class="logs-page">
     <div class="page-header">
-      <h2 class="page-title">
-        实时日志
-      </h2>
+      <h2 class="page-title">实时日志</h2>
       <div class="page-actions">
-        <Select
-          v-model="levelFilter"
-          :options="levelOptions"
-          label="日志级别"
-        />
-        <Button
-          type="default"
-          @click="handleClear"
-        >
-          清空日志
-        </Button>
+        <Select v-model="levelFilter" :options="levelOptions" label="日志级别" />
+        <Button type="default" @click="handleClear"> 清空日志 </Button>
       </div>
     </div>
 
     <Card class="logs-card">
-      <div
-        ref="logContainer"
-        class="log-container"
-      >
+      <div ref="logContainer" class="log-container">
         <div
           v-for="(log, index) in filteredLogs"
           :key="index"
@@ -35,12 +21,7 @@
           </Tag>
           <span class="log-message">{{ log.message }}</span>
         </div>
-        <div
-          v-if="filteredLogs.length === 0"
-          class="log-empty"
-        >
-          暂无日志
-        </div>
+        <div v-if="filteredLogs.length === 0" class="log-empty">暂无日志</div>
       </div>
     </Card>
   </div>

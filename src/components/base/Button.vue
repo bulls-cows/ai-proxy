@@ -4,10 +4,7 @@
     :disabled="disabled || loading"
     @click="$emit('click', $event)"
   >
-    <span
-      v-if="loading"
-      class="btn-spinner"
-    />
+    <span v-if="loading" class="btn-spinner" />
     <slot />
   </button>
 </template>

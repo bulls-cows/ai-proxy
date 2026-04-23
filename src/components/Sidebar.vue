@@ -1,12 +1,8 @@
 <template>
   <aside class="sidebar">
     <div class="sidebar-header">
-      <h1 class="sidebar-title">
-        Retry Model Request
-      </h1>
-      <p class="sidebar-subtitle">
-        AI 模型请求代理工具
-      </p>
+      <h1 class="sidebar-title">Retry Model Request</h1>
+      <p class="sidebar-subtitle">AI 模型请求代理工具</p>
     </div>
 
     <nav class="sidebar-nav">
@@ -17,10 +13,7 @@
         class="nav-item"
         :class="{ 'nav-item-active': isActive(item.path) }"
       >
-        <component
-          :is="item.icon"
-          class="nav-icon"
-        />
+        <component :is="item.icon" class="nav-icon" />
         <span class="nav-text">{{ item.name }}</span>
       </router-link>
     </nav>
@@ -32,9 +25,7 @@
           {{ proxyStore.status === 'running' ? '运行中' : '已停止' }}
         </span>
       </div>
-      <p class="version">
-        v1.0.0
-      </p>
+      <p class="version">v1.0.0</p>
     </div>
   </aside>
 </template>

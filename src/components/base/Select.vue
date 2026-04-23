@@ -1,9 +1,6 @@
 <template>
   <div class="select-wrapper">
-    <label
-      v-if="label"
-      class="select-label"
-    >{{ label }}</label>
+    <label v-if="label" class="select-label">{{ label }}</label>
     <div class="select-container">
       <select
         :value="modelValue"
@@ -11,11 +8,7 @@
         class="select-field"
         @change="$emit('update:modelValue', ($event.target as HTMLSelectElement).value)"
       >
-        <option
-          v-for="option in options"
-          :key="option.value"
-          :value="option.value"
-        >
+        <option v-for="option in options" :key="option.value" :value="option.value">
           {{ option.label }}
         </option>
       </select>

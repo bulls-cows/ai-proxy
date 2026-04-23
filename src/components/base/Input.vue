@@ -1,13 +1,7 @@
 <template>
   <div class="input-wrapper">
-    <label
-      v-if="label"
-      class="input-label"
-    >{{ label }}</label>
-    <div
-      class="input-container"
-      :class="{ 'input-error': error }"
-    >
+    <label v-if="label" class="input-label">{{ label }}</label>
+    <div class="input-container" :class="{ 'input-error': error }">
       <input
         :type="type"
         :value="modelValue"
@@ -15,12 +9,9 @@
         :disabled="disabled"
         class="input-field"
         @input="$emit('update:modelValue', ($event.target as HTMLInputElement).value)"
-      >
+      />
     </div>
-    <span
-      v-if="error"
-      class="input-error-text"
-    >{{ error }}</span>
+    <span v-if="error" class="input-error-text">{{ error }}</span>
   </div>
 </template>
 
