@@ -27,6 +27,16 @@
             </span>
           </div>
           <div v-if="expandedLogs.includes(index) && log.details" class="log-details">
+            <div class="log-details-header">
+              <span class="log-details-title">详细信息</span>
+              <Button
+                type="default"
+                size="small"
+                @click.stop="handleCopyDetails(log.details, index)"
+              >
+                {{ copiedIndex === index ? '已复制' : '复制' }}
+              </Button>
+            </div>
             <pre class="log-details-content">{{ formatDetails(log.details) }}</pre>
           </div>
         </div>
@@ -48,6 +58,7 @@ const proxyStore = useProxyStore()
 const logContainer = ref<HTMLElement | null>(null)
 const levelFilter = ref('ALL')
 const expandedLogs = ref<number[]>([])
+const copiedIndex = ref<number | null>(null)
 
 const levelOptions = [
   { label: '全部', value: 'ALL' },
@@ -99,6 +110,19 @@ function toggleExpand(index: number) {
 function handleClear() {
   proxyStore.clearLogs()
   expandedLogs.value = []
+}
+
+async function handleCopyDetails(details: Record<string, unknown>, index: number) {
+  const content = formatDetails(details)
+  try {
+    await navigator.clipboard.writeText(content)
+    copiedIndex.value = index
+    setTimeout(() => {
+      copiedIndex.value = null
+    }, 2000)
+  } catch (err) {
+    console.error('复制失败:', err)
+  }
 }
 
 function scrollToBottom() {
@@ -211,6 +235,20 @@ onMounted(() => {
   background: var(--bg-primary);
   border-radius: var(--radius-sm);
   border: 1px solid var(--border-primary);
+}
+
+.log-details-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border-primary);
+}
+
+.log-details-title {
+  font-size: var(--font-xs);
+  color: var(--text-tertiary);
 }
 
 .log-details-content {
