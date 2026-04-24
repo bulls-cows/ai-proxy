@@ -4,6 +4,7 @@
   "description": "AI Model Request Proxy with Auto-Retry - Desktop Application",
   "type": "module",
   "scripts": {
+    "ready": "npm install",
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
