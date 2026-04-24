@@ -18,34 +18,60 @@ pub async fn proxy_handler(
     request: Request,
 ) -> Response {
     let uri = request.uri().clone();
-    let path = uri.path();
+    let path = uri.path().to_string();
+    let method = request.method().clone();
 
     // Build target URL
     let target_url = format!("{}{}", state.profile.target_base_url, path);
 
-    // Check if streaming request
-    let is_streaming = is_streaming_request(&request);
+    // Read body first to check for streaming flag
+    let (parts, body) = request.into_parts();
+    let body_bytes = match axum::body::to_bytes(body, 100 * 1024 * 1024).await {
+        Ok(b) => b,
+        Err(e) => {
+            let _ = state.log_sender.send(LogEntry {
+                timestamp: chrono::Local::now().to_rfc3339(),
+                level: "ERROR".to_string(),
+                message: format!("Failed to read request body: {}", e),
+                details: None,
+            });
+            return (
+                StatusCode::BAD_REQUEST,
+                format!("Failed to read body: {}", e),
+            )
+                .into_response();
+        }
+    };
+
+    // Check if streaming request (via Accept header or body content)
+    let is_streaming =
+        is_streaming_request_by_headers(&parts.headers) || is_streaming_body(&body_bytes);
 
     // Handle streaming vs regular requests
     if is_streaming {
-        handle_streaming_request(state, request, target_url).await
+        handle_streaming_request_with_body(state, parts, body_bytes, target_url, method, path).await
     } else {
-        handle_regular_request(state, request, target_url).await
+        handle_regular_request_with_body(state, parts, body_bytes, target_url, method, path).await
     }
 }
 
-/// Check if request is a streaming request
-fn is_streaming_request(request: &Request) -> bool {
-    // Check Accept header
-    if let Some(accept) = request.headers().get("accept") {
+/// Check if request headers indicate streaming
+fn is_streaming_request_by_headers(headers: &axum::http::HeaderMap) -> bool {
+    if let Some(accept) = headers.get("accept") {
         if let Ok(accept_str) = accept.to_str() {
             if accept_str.contains("text/event-stream") {
                 return true;
             }
         }
     }
-
     false
+}
+
+/// Check if request body indicates streaming (contains "stream": true)
+fn is_streaming_body(body: &[u8]) -> bool {
+    let body_str = String::from_utf8_lossy(body);
+    // Check for "stream": true or "stream":true in JSON body
+    body_str.contains("\"stream\":true") || body_str.contains("\"stream\": true")
 }
 
 /// Truncate string to max length
@@ -70,32 +96,14 @@ fn format_body(bytes: &[u8], max_len: usize) -> String {
 }
 
 /// Handle regular (non-streaming) request with retry
-async fn handle_regular_request(
+async fn handle_regular_request_with_body(
     state: std::sync::Arc<ProxyState>,
-    request: Request,
+    parts: axum::http::request::Parts,
+    body_bytes: axum::body::Bytes,
     target_url: String,
+    method: Method,
+    path: String,
 ) -> Response {
-    let method = request.method().clone();
-    let path = request.uri().path().to_string();
-    let (parts, body) = request.into_parts();
-
-    let body_bytes = match axum::body::to_bytes(body, 100 * 1024 * 1024).await {
-        Ok(b) => b,
-        Err(e) => {
-            let _ = state.log_sender.send(LogEntry {
-                timestamp: chrono::Local::now().to_rfc3339(),
-                level: "ERROR".to_string(),
-                message: format!("Failed to read request body: {}", e),
-                details: None,
-            });
-            return (
-                StatusCode::BAD_REQUEST,
-                format!("Failed to read body: {}", e),
-            )
-                .into_response();
-        }
-    };
-
     // Extract request headers
     let req_headers: serde_json::Map<String, serde_json::Value> = parts
         .headers
@@ -268,33 +276,15 @@ async fn handle_regular_request(
     }
 }
 
-/// Handle streaming (SSE) request
-async fn handle_streaming_request(
+/// Handle streaming (SSE) request with pre-read body
+async fn handle_streaming_request_with_body(
     state: std::sync::Arc<ProxyState>,
-    request: Request,
+    parts: axum::http::request::Parts,
+    body_bytes: axum::body::Bytes,
     target_url: String,
+    method: Method,
+    path: String,
 ) -> Response {
-    let method = request.method().clone();
-    let path = request.uri().path().to_string();
-    let (parts, body) = request.into_parts();
-
-    let body_bytes = match axum::body::to_bytes(body, 100 * 1024 * 1024).await {
-        Ok(b) => b,
-        Err(e) => {
-            let _ = state.log_sender.send(LogEntry {
-                timestamp: chrono::Local::now().to_rfc3339(),
-                level: "ERROR".to_string(),
-                message: format!("Failed to read request body: {}", e),
-                details: None,
-            });
-            return (
-                StatusCode::BAD_REQUEST,
-                format!("Failed to read body: {}", e),
-            )
-                .into_response();
-        }
-    };
-
     // Extract request headers
     let req_headers: serde_json::Map<String, serde_json::Value> = parts
         .headers
@@ -321,9 +311,9 @@ async fn handle_streaming_request(
         })),
     });
 
-    // Create HTTP client
+    // Create HTTP client with no timeout for streaming
     let client = Client::builder()
-        .timeout(Duration::from_secs(120))
+        .timeout(Duration::from_secs(300))
         .build()
         .unwrap();
 
@@ -363,11 +353,13 @@ async fn handle_streaming_request(
                 })),
             });
 
-            let response_builder = Response::builder()
-                .status(status)
-                .header("content-type", "text/event-stream")
-                .header("cache-control", "no-cache")
-                .header("connection", "keep-alive");
+            // Build response with all original headers
+            let mut response_builder = Response::builder().status(status);
+
+            // Copy all response headers from upstream
+            for (name, value) in response.headers() {
+                response_builder = response_builder.header(name, value);
+            }
 
             // Create streaming body
             let stream = response.bytes_stream().map(|result| match result {
