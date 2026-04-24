@@ -12,9 +12,7 @@
 ## Quality Gate
 
 - 改动后必须执行:
-  - `npm run lint` (前端代码格式化、静态检查)
-  - `cargo fmt --check` (Rust 代码格式检查)
-  - `cargo clippy` (Rust 静态检查)
+  - `npm run lint` (代码格式化、静态检查，已包含 Rust 相关检查)
 
 ## Delivery Format
 
@@ -81,12 +79,6 @@ npm run tauri dev
 # 构建
 npm run tauri build
 
-# 前端 lint
+# 代码格式化与静态检查 (包含前端和 Rust)
 npm run lint
-
-# Rust 格式化
-cargo fmt
-
-# Rust 检查
-cargo clippy
 ```
