@@ -1,7 +1,9 @@
 <template>
   <aside class="sidebar">
     <div class="sidebar-header">
-      <h1 class="sidebar-title">Retry Model Request</h1>
+      <h1 class="sidebar-title">
+        {{ APP_NAME }}
+      </h1>
       <p class="sidebar-subtitle">AI 模型请求代理工具</p>
     </div>
 
@@ -25,7 +27,7 @@
           {{ proxyStore.status === 'running' ? '运行中' : '已停止' }}
         </span>
       </div>
-      <p class="version">v1.0.0</p>
+      <p class="version">v{{ APP_VERSION }}</p>
     </div>
   </aside>
 </template>
@@ -34,6 +36,7 @@
 import { h } from 'vue'
 import { useRoute } from 'vue-router'
 import { useProxyStore } from '@/stores/proxy'
+import { APP_NAME, APP_VERSION } from '@/scripts/ConstantUtils'
 
 const route = useRoute()
 const proxyStore = useProxyStore()
