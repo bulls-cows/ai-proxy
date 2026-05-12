@@ -2,7 +2,7 @@
   <aside class="sidebar">
     <div class="sidebar-header">
       <h1 class="sidebar-title">
-        {{ APP_NAME }}
+        {{ brandName }}
       </h1>
       <p class="sidebar-subtitle">AI 模型请求代理工具</p>
     </div>
@@ -36,7 +36,8 @@
 import { h } from 'vue'
 import { useRoute } from 'vue-router'
 import { useProxyStore } from '@/stores/proxy'
-import { APP_NAME, APP_VERSION } from '@/scripts/ConstantUtils'
+import { brandName } from '@/stores/store'
+import { APP_VERSION } from '@/scripts/constantUtils'
 
 const route = useRoute()
 const proxyStore = useProxyStore()

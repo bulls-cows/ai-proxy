@@ -1,6 +1,6 @@
 import { computed } from 'vue'
 import { tempRef } from '@/scripts/storageUtils.ts'
-import { APP_NAME, APP_VERSION } from '@/scripts/ConstantUtils.ts'
+import { APP_NAME, APP_VERSION } from '@/scripts/constantUtils.ts'
 
 /**
  * 产品身份
