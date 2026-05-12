@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
-import { invoke } from '@tauri-apps/api/core'
 import { listen, type UnlistenFn } from '@tauri-apps/api/event'
+import { getStats, resetStats } from '@/apis/api'
 
 export interface StatsSnapshot {
   total_requests: number
@@ -30,15 +30,15 @@ export const useStatsStore = defineStore('stats', () => {
 
   async function loadStats() {
     try {
-      stats.value = await invoke<StatsSnapshot>('get_stats')
+      stats.value = await getStats()
     } catch (e) {
       console.error('Failed to load stats:', e)
     }
   }
 
-  async function resetStats() {
+  async function resetStatsStore() {
     try {
-      await invoke('reset_stats')
+      await resetStats()
       stats.value = {
         total_requests: 0,
         successful_requests: 0,
@@ -59,7 +59,7 @@ export const useStatsStore = defineStore('stats', () => {
     stats,
     setupListeners,
     loadStats,
-    resetStats,
+    resetStats: resetStatsStore,
     cleanup,
   }
 })

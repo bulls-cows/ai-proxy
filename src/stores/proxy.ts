@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
-import { invoke } from '@tauri-apps/api/core'
 import { listen, type UnlistenFn } from '@tauri-apps/api/event'
+import { startProxy, stopProxy, getProxyStatus } from '@/apis/api'
 
 export interface LogEntry {
   timestamp: string
@@ -38,7 +38,7 @@ export const useProxyStore = defineStore('proxy', () => {
   async function start() {
     error.value = null
     try {
-      port.value = await invoke<number>('start_proxy')
+      port.value = await startProxy()
       status.value = 'running'
     } catch (e) {
       error.value = String(e)
@@ -48,7 +48,7 @@ export const useProxyStore = defineStore('proxy', () => {
   async function stop() {
     error.value = null
     try {
-      await invoke('stop_proxy')
+      await stopProxy()
       status.value = 'stopped'
       port.value = null
     } catch (e) {
@@ -58,7 +58,7 @@ export const useProxyStore = defineStore('proxy', () => {
 
   async function checkStatus() {
     try {
-      const result = await invoke<string>('get_proxy_status')
+      const result = await getProxyStatus()
       status.value = result as 'running' | 'stopped'
     } catch (e) {
       error.value = String(e)

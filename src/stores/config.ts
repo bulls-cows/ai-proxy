@@ -1,6 +1,13 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
-import { invoke } from '@tauri-apps/api/core'
+import {
+  getConfig,
+  saveConfig as saveConfigApi,
+  createProfile as createProfileApi,
+  updateProfile as updateProfileApi,
+  deleteProfile as deleteProfileApi,
+  setActiveProfile as setActiveProfileApi,
+} from '@/apis/api'
 
 export interface ProxyProfile {
   id: string
@@ -34,7 +41,7 @@ export const useConfigStore = defineStore('config', () => {
     loading.value = true
     error.value = null
     try {
-      config.value = await invoke<Config>('get_config')
+      config.value = await getConfig()
     } catch (e) {
       error.value = String(e)
     } finally {
@@ -44,7 +51,7 @@ export const useConfigStore = defineStore('config', () => {
 
   async function saveConfig(newConfig: Config) {
     try {
-      await invoke('save_config', { config: newConfig })
+      await saveConfigApi(newConfig)
       config.value = newConfig
     } catch (e) {
       error.value = String(e)
@@ -53,7 +60,7 @@ export const useConfigStore = defineStore('config', () => {
 
   async function createProfile(name: string) {
     try {
-      const profile = await invoke<ProxyProfile>('create_profile', { name })
+      const profile = await createProfileApi(name)
       await loadConfig()
       return profile
     } catch (e) {
@@ -64,7 +71,7 @@ export const useConfigStore = defineStore('config', () => {
 
   async function updateProfile(profile: ProxyProfile) {
     try {
-      await invoke('update_profile', { profile })
+      await updateProfileApi(profile)
       await loadConfig()
     } catch (e) {
       error.value = String(e)
@@ -73,7 +80,7 @@ export const useConfigStore = defineStore('config', () => {
 
   async function deleteProfile(id: string) {
     try {
-      await invoke('delete_profile', { id })
+      await deleteProfileApi(id)
       await loadConfig()
     } catch (e) {
       error.value = String(e)
@@ -82,7 +89,7 @@ export const useConfigStore = defineStore('config', () => {
 
   async function setActiveProfile(id: string) {
     try {
-      await invoke('set_active_profile', { id })
+      await setActiveProfileApi(id)
       await loadConfig()
     } catch (e) {
       error.value = String(e)

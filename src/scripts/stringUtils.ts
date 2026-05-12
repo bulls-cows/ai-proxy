@@ -3,7 +3,5 @@
  * 例如: 'ai_proxy' -> 'Ai Proxy'
  */
 export function toTitleCase(name: string): string {
-  return name
-    .replace(/_/g, ' ')
-    .replace(/\b\w/g, (char) => char.toUpperCase())
+  return name.replace(/_/g, ' ').replace(/\b\w/g, char => char.toUpperCase())
 }
