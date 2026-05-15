@@ -10,12 +10,18 @@
 </template>
 
 <script setup lang="ts">
-defineProps<{
-  type?: 'primary' | 'success' | 'warning' | 'danger' | 'default'
-  size?: 'small' | 'medium' | 'large'
-  loading?: boolean
-  disabled?: boolean
-}>()
+withDefaults(
+  defineProps<{
+    type?: 'primary' | 'success' | 'warning' | 'danger' | 'default'
+    size?: 'small' | 'medium' | 'large'
+    loading?: boolean
+    disabled?: boolean
+  }>(),
+  {
+    type: 'default',
+    size: 'medium',
+  }
+)
 
 defineEmits<{
   click: [event: MouseEvent]
@@ -34,6 +40,8 @@ defineEmits<{
   cursor: pointer;
   transition: all var(--transition-fast);
   white-space: nowrap;
+  background: transparent;
+  line-height: 1.5;
 
   &:disabled {
     opacity: 0.6;
