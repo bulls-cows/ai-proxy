@@ -74,10 +74,16 @@ fn is_streaming_body(body: &[u8]) -> bool {
     body_str.contains("\"stream\":true") || body_str.contains("\"stream\": true")
 }
 
-/// Truncate string to max length
-fn truncate_string(s: &str, max_len: usize) -> String {
-    if s.len() > max_len {
-        format!("{}... (truncated, {} bytes total)", &s[..max_len], s.len())
+/// Truncate string to max length (by characters, not bytes)
+fn truncate_string(s: &str, max_chars: usize) -> String {
+    let char_count = s.chars().count();
+    if char_count > max_chars {
+        // Find the byte position at max_chars character boundary
+        if let Some((idx, _)) = s.char_indices().nth(max_chars) {
+            format!("{}... (truncated, {} chars total)", &s[..idx], char_count)
+        } else {
+            s.to_string()
+        }
     } else {
         s.to_string()
     }
