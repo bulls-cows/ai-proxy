@@ -1,9 +1,12 @@
 <template>
   <aside class="sidebar">
     <div class="sidebar-header">
-      <h1 class="sidebar-title">
-        {{ brandName }}
-      </h1>
+      <div class="sidebar-title-row">
+        <h1 class="sidebar-title">
+          {{ brandName }}
+        </h1>
+        <p class="version">v{{ APP_VERSION }}</p>
+      </div>
       <p class="sidebar-subtitle">AI 模型请求代理工具</p>
     </div>
 
@@ -37,7 +40,6 @@
           {{ proxyStore.status === 'running' ? '运行中' : '已停止' }}
         </span>
       </div>
-      <p class="version">v{{ APP_VERSION }}</p>
     </div>
   </aside>
 </template>
@@ -118,15 +120,23 @@ async function toggleAlwaysOnTop() {
 }
 
 .sidebar-header {
-  padding: var(--spacing-lg);
+  padding: var(--spacing-md);
   border-bottom: 1px solid var(--border-primary);
+}
+
+.sidebar-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-sm);
+  margin-bottom: 4px;
 }
 
 .sidebar-title {
   font-size: var(--font-xl);
   font-weight: 600;
   color: var(--text-primary);
-  margin: 0 0 4px 0;
+  margin: 0;
 }
 
 .sidebar-subtitle {
@@ -176,7 +186,7 @@ async function toggleAlwaysOnTop() {
 }
 
 .sidebar-footer {
-  padding: var(--spacing-md) var(--spacing-lg);
+  padding: var(--spacing-md);
   border-top: 1px solid var(--border-primary);
 }
 
@@ -186,7 +196,6 @@ async function toggleAlwaysOnTop() {
   align-items: center;
   gap: 8px;
   padding: 10px 12px;
-  margin-bottom: 12px;
   border: none;
   border-radius: var(--radius-md);
   background: transparent;
@@ -215,21 +224,27 @@ async function toggleAlwaysOnTop() {
   display: flex;
   align-items: center;
   gap: 8px;
-  margin-bottom: 8px;
+  padding: 10px 12px;
 }
 
 .status-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
+  width: 16px;
+  height: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 
-  &.running {
-    background: var(--color-success);
-    box-shadow: 0 0 8px var(--color-success);
+  &::before {
+    content: '';
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--text-tertiary);
   }
 
-  &.stopped {
-    background: var(--text-tertiary);
+  &.running::before {
+    background: var(--color-success);
+    box-shadow: 0 0 8px var(--color-success);
   }
 }
 
@@ -242,5 +257,6 @@ async function toggleAlwaysOnTop() {
   font-size: var(--font-xs);
   color: var(--text-tertiary);
   margin: 0;
+  white-space: nowrap;
 }
 </style>
