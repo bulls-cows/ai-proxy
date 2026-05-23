@@ -75,13 +75,6 @@ const LogsIcon = () =>
     h('line', { x1: '10', y1: '9', x2: '8', y2: '9' }),
   ])
 
-const StatsIcon = () =>
-  h('svg', { viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', 'stroke-width': '2' }, [
-    h('line', { x1: '18', y1: '20', x2: '18', y2: '10' }),
-    h('line', { x1: '12', y1: '20', x2: '12', y2: '4' }),
-    h('line', { x1: '6', y1: '20', x2: '6', y2: '14' }),
-  ])
-
 const PinIcon = () =>
   h('svg', { viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', 'stroke-width': '2' }, [
     h('path', { d: 'M12 17v5' }),
@@ -94,7 +87,6 @@ const PinIcon = () =>
 const navItems = [
   { path: '/', name: '仪表盘', icon: DashboardIcon },
   { path: '/logs', name: '实时日志', icon: LogsIcon },
-  { path: '/stats', name: '统计面板', icon: StatsIcon },
 ]
 
 function isActive(path: string) {
