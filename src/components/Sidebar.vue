@@ -21,6 +21,16 @@
     </nav>
 
     <div class="sidebar-footer">
+      <button
+        type="button"
+        class="pin-toggle"
+        :class="{ 'pin-toggle-active': isAlwaysOnTop }"
+        @click="toggleAlwaysOnTop"
+      >
+        <PinIcon class="pin-icon" />
+        <span>{{ isAlwaysOnTop ? '取消置顶' : '窗口置顶' }}</span>
+      </button>
+
       <div class="status-indicator">
         <span :class="['status-dot', proxyStore.status]" />
         <span class="status-text">
@@ -33,7 +43,8 @@
 </template>
 
 <script setup lang="ts">
-import { h } from 'vue'
+import { h, ref } from 'vue'
+import { getCurrentWindow } from '@tauri-apps/api/window'
 import { useRoute } from 'vue-router'
 import { useProxyStore } from '@/stores/proxy'
 import { brandName } from '@/stores/store'
@@ -41,6 +52,8 @@ import { APP_VERSION } from '@/scripts/constantUtils'
 
 const route = useRoute()
 const proxyStore = useProxyStore()
+const isAlwaysOnTop = ref(false)
+const appWindow = getCurrentWindow()
 
 // Icon components using h() function to avoid v-html XSS warning
 const DashboardIcon = () =>
@@ -67,6 +80,15 @@ const StatsIcon = () =>
     h('line', { x1: '6', y1: '20', x2: '6', y2: '14' }),
   ])
 
+const PinIcon = () =>
+  h('svg', { viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', 'stroke-width': '2' }, [
+    h('path', { d: 'M12 17v5' }),
+    h('path', { d: 'M5 17h14' }),
+    h('path', { d: 'M7 9h10' }),
+    h('path', { d: 'M9 9V4h6v5' }),
+    h('path', { d: 'M8 9l-2 8h12l-2-8' }),
+  ])
+
 const navItems = [
   { path: '/', name: '仪表盘', icon: DashboardIcon },
   { path: '/logs', name: '实时日志', icon: LogsIcon },
@@ -75,6 +97,13 @@ const navItems = [
 
 function isActive(path: string) {
   return route.path === path
+}
+
+async function toggleAlwaysOnTop() {
+  const nextAlwaysOnTop = !isAlwaysOnTop.value
+
+  await appWindow.setAlwaysOnTop(nextAlwaysOnTop)
+  isAlwaysOnTop.value = nextAlwaysOnTop
 }
 </script>
 
@@ -149,6 +178,37 @@ function isActive(path: string) {
 .sidebar-footer {
   padding: var(--spacing-md) var(--spacing-lg);
   border-top: 1px solid var(--border-primary);
+}
+
+.pin-toggle {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  margin-bottom: 12px;
+  border: none;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: var(--font-sm);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+
+  &:hover {
+    background: var(--bg-hover);
+    color: var(--color-primary);
+  }
+
+  &.pin-toggle-active {
+    background: rgba(64, 158, 255, 0.1);
+    color: var(--color-primary);
+  }
+}
+
+.pin-icon {
+  width: 16px;
+  height: 16px;
 }
 
 .status-indicator {
