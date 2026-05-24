@@ -1,48 +1,48 @@
 <template>
   <!-- AppSidebar - 侧边导航栏 -->
-  <aside class="sidebar">
+  <aside class="app-sidebar">
     <!-- 侧边栏头部：品牌信息 -->
-    <div class="sidebar-header">
-      <div class="sidebar-title-row">
-        <h1 class="sidebar-title">
+    <div class="app-sidebar__header">
+      <div class="app-sidebar__title-row">
+        <h1 class="app-sidebar__title">
           {{ brandName }}
         </h1>
-        <p class="version">v{{ APP_VERSION }}</p>
+        <p class="app-sidebar__version">v{{ APP_VERSION }}</p>
       </div>
-      <p class="sidebar-subtitle">AI 模型请求代理工具</p>
+      <p class="app-sidebar__subtitle">AI 模型请求代理工具</p>
     </div>
 
     <!-- 侧边栏导航菜单 -->
-    <nav class="sidebar-nav">
+    <nav class="app-sidebar__nav">
       <router-link
         v-for="item in navItems"
         :key="item.path"
         :to="item.path"
-        class="nav-item"
-        :class="{ 'nav-item-active': isActive(item.path) }"
+        class="app-sidebar__nav-item"
+        :class="{ 'app-sidebar__nav-item--active': isActive(item.path) }"
       >
-        <component :is="item.icon" class="nav-icon" />
-        <span class="nav-text">{{ item.name }}</span>
+        <component :is="item.icon" class="app-sidebar__nav-icon" />
+        <span class="app-sidebar__nav-text">{{ item.name }}</span>
       </router-link>
     </nav>
 
     <!-- 侧边栏底部：窗口控制与状态 -->
-    <div class="sidebar-footer">
+    <div class="app-sidebar__footer">
       <!-- 窗口置顶切换按钮 -->
       <button
         type="button"
-        class="pin-toggle"
-        :class="{ 'pin-toggle-active': isAlwaysOnTop }"
+        class="app-sidebar__pin-toggle"
+        :class="{ 'app-sidebar__pin-toggle--active': isAlwaysOnTop }"
         @click="toggleAlwaysOnTop"
       >
-        <PinIcon class="pin-icon" />
+        <PinIcon class="app-sidebar__pin-icon" />
         <span>{{ isAlwaysOnTop ? '取消置顶' : '窗口置顶' }}</span>
       </button>
 
       <!-- 代理服务状态指示器 -->
-      <div class="status-indicator">
-        <span :class="['status-dot', proxyStore.status]" />
-        <span class="status-text">
+      <div class="app-sidebar__status-indicator">
+        <span :class="['app-sidebar__status-dot', proxyStore.status]" />
+        <span class="app-sidebar__status-text">
           {{ proxyStore.status === 'running' ? '运行中' : '已停止' }}
         </span>
       </div>
@@ -131,7 +131,7 @@ async function toggleAlwaysOnTop() {
 
 <style lang="scss" scoped>
 /* 侧边栏容器 */
-.sidebar {
+.app-sidebar {
   width: var(--sidebar-width);
   height: 100vh;
   background: var(--bg-primary);
@@ -141,13 +141,13 @@ async function toggleAlwaysOnTop() {
 }
 
 /* 侧边栏 > 头部 */
-.sidebar-header {
+.app-sidebar__header {
   padding: var(--spacing-md);
   border-bottom: 1px solid var(--border-primary);
 }
 
 /* 侧边栏 > 头部 > 标题行 */
-.sidebar-title-row {
+.app-sidebar__title-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -156,7 +156,7 @@ async function toggleAlwaysOnTop() {
 }
 
 /* 侧边栏 > 头部 > 标题 */
-.sidebar-title {
+.app-sidebar__title {
   font-size: var(--font-xl);
   font-weight: 600;
   color: var(--text-primary);
@@ -164,20 +164,20 @@ async function toggleAlwaysOnTop() {
 }
 
 /* 侧边栏 > 头部 > 副标题 */
-.sidebar-subtitle {
+.app-sidebar__subtitle {
   font-size: var(--font-sm);
   color: var(--text-tertiary);
   margin: 0;
 }
 
 /* 侧边栏 > 导航菜单 */
-.sidebar-nav {
+.app-sidebar__nav {
   flex: 1;
   padding: var(--spacing-md);
 }
 
 /* 侧边栏 > 导航菜单 > 导航项 */
-.nav-item {
+.app-sidebar__nav-item {
   display: flex;
   align-items: center;
   gap: 12px;
@@ -193,14 +193,14 @@ async function toggleAlwaysOnTop() {
     color: var(--color-primary);
   }
 
-  &.nav-item-active {
+  &.app-sidebar__nav-item--active {
     background: rgba(64, 158, 255, 0.1);
     color: var(--color-primary);
   }
 }
 
 /* 侧边栏 > 导航菜单 > 图标 */
-.nav-icon {
+.app-sidebar__nav-icon {
   width: 20px;
   height: 20px;
   display: flex;
@@ -209,19 +209,19 @@ async function toggleAlwaysOnTop() {
 }
 
 /* 侧边栏 > 导航菜单 > 文字 */
-.nav-text {
+.app-sidebar__nav-text {
   font-size: var(--font-md);
   font-weight: 500;
 }
 
 /* 侧边栏 > 底部 */
-.sidebar-footer {
+.app-sidebar__footer {
   padding: var(--spacing-md);
   border-top: 1px solid var(--border-primary);
 }
 
 /* 侧边栏 > 底部 > 置顶按钮 */
-.pin-toggle {
+.app-sidebar__pin-toggle {
   width: 100%;
   display: flex;
   align-items: center;
@@ -240,20 +240,20 @@ async function toggleAlwaysOnTop() {
     color: var(--color-primary);
   }
 
-  &.pin-toggle-active {
+  &.app-sidebar__pin-toggle--active {
     background: rgba(64, 158, 255, 0.1);
     color: var(--color-primary);
   }
 }
 
 /* 侧边栏 > 底部 > 置顶图标 */
-.pin-icon {
+.app-sidebar__pin-icon {
   width: 16px;
   height: 16px;
 }
 
 /* 侧边栏 > 底部 > 状态指示器 */
-.status-indicator {
+.app-sidebar__status-indicator {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -261,7 +261,7 @@ async function toggleAlwaysOnTop() {
 }
 
 /* 侧边栏 > 底部 > 状态指示器 > 状态点 */
-.status-dot {
+.app-sidebar__status-dot {
   width: 16px;
   height: 16px;
   display: flex;
@@ -283,13 +283,13 @@ async function toggleAlwaysOnTop() {
 }
 
 /* 侧边栏 > 底部 > 状态文字 */
-.status-text {
+.app-sidebar__status-text {
   font-size: var(--font-sm);
   color: var(--text-secondary);
 }
 
-/* 版本号 */
-.version {
+/* 侧边栏 > 头部 > 版本号 */
+.app-sidebar__version {
   font-size: var(--font-xs);
   color: var(--text-tertiary);
   margin: 0;
