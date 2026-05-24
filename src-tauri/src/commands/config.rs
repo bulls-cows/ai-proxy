@@ -20,9 +20,9 @@ pub fn save_config(manager: State<'_, ConfigManager>, config: Config) -> Result<
 #[tauri::command]
 pub fn create_profile(
     manager: State<'_, ConfigManager>,
-    name: String,
+    profile: ProxyProfile,
 ) -> Result<ProxyProfile, String> {
-    manager.create_profile(name).map_err(|e| e.to_string())
+    manager.create_profile(profile).map_err(|e| e.to_string())
 }
 
 /// Update a profile

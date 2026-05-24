@@ -70,12 +70,10 @@ impl ConfigManager {
     }
 
     /// Create a new profile
-    pub fn create_profile(&self, name: String) -> anyhow::Result<ProxyProfile> {
-        let profile = ProxyProfile {
-            id: uuid::Uuid::new_v4().to_string(),
-            name,
-            ..Default::default()
-        };
+    pub fn create_profile(&self, mut profile: ProxyProfile) -> anyhow::Result<ProxyProfile> {
+        if profile.id.is_empty() {
+            profile.id = uuid::Uuid::new_v4().to_string();
+        }
         let mut config = self.config.lock().unwrap();
         config.profiles.push(profile.clone());
         drop(config);

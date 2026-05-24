@@ -11,8 +11,8 @@ export function saveConfig(config: Config) {
   return doRequest<void>('save_config', { config })
 }
 
-export function createProfile(name: string) {
-  return doRequest<ProxyProfile>('create_profile', { name })
+export function createProfile(profile: Omit<ProxyProfile, 'id'>) {
+  return doRequest<ProxyProfile>('create_profile', { profile })
 }
 
 export function updateProfile(profile: ProxyProfile) {

@@ -58,11 +58,11 @@ export const useConfigStore = defineStore('config', () => {
     }
   }
 
-  async function createProfile(name: string) {
+  async function createProfile(profile: Omit<ProxyProfile, 'id'>) {
     try {
-      const profile = await createProfileApi(name)
+      const createdProfile = await createProfileApi(profile)
       await loadConfig()
-      return profile
+      return createdProfile
     } catch (e) {
       error.value = String(e)
       return null
