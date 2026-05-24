@@ -101,15 +101,10 @@
             </div>
           </div>
           <div class="status-actions">
-            <Button
-              v-if="proxyStore.status === 'stopped'"
-              type="primary"
-              size="large"
-              @click="handleStart"
-            >
+            <Button v-if="proxyStore.status === 'stopped'" type="primary" @click="handleStart">
               启动服务
             </Button>
-            <Button v-else type="danger" size="large" @click="handleStop"> 停止服务 </Button>
+            <Button v-else type="danger" @click="handleStop"> 停止服务 </Button>
           </div>
         </template>
         <div v-else class="status-empty">暂无方案，请点击「新建方案」</div>
@@ -127,6 +122,9 @@
       @save="handleSaveProfile"
       @delete="handleDeleteProfile"
     />
+
+    <!-- Toast -->
+    <Toast :message="toastMessage" :visible="toastVisible" />
   </div>
 </template>
 
@@ -135,6 +133,7 @@ import { ref, computed, onMounted, watch } from 'vue'
 import Card from '@/components/base/Card.vue'
 import Button from '@/components/base/Button.vue'
 import Select from '@/components/base/Select.vue'
+import Toast from '@/components/base/Toast.vue'
 import DialogEditProfile from '@/components/DialogEditProfile/DialogEditProfile.vue'
 import { useConfigStore } from '@/stores/config'
 import type { ProxyProfile } from '@/stores/config'
@@ -149,6 +148,8 @@ const showCreateModal = ref(false)
 const showConfigModal = ref(false)
 const activeProfileId = ref<string>('')
 const copied = ref(false)
+const toastVisible = ref(false)
+const toastMessage = ref('')
 
 const activeProfile = computed(() => configStore.activeProfile)
 
@@ -162,8 +163,11 @@ async function copyBaseUrl() {
   try {
     await navigator.clipboard.writeText(baseUrl.value)
     copied.value = true
+    toastMessage.value = '已复制到剪贴板'
+    toastVisible.value = true
     setTimeout(() => {
       copied.value = false
+      toastVisible.value = false
     }, 2000)
   } catch (err) {
     console.error('Failed to copy:', err)
