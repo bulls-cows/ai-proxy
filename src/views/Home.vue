@@ -5,6 +5,34 @@
       <p class="page-desc">配置代理服务并启动</p>
     </div>
 
+    <!-- Quick Stats -->
+    <div class="quick-stats">
+      <Card>
+        <div class="stat-item">
+          <span class="stat-value">{{ statsStore.stats.total_requests }}</span>
+          <span class="stat-label">总请求数</span>
+        </div>
+      </Card>
+      <Card>
+        <div class="stat-item">
+          <span class="stat-value text-success">{{ statsStore.stats.successful_requests }}</span>
+          <span class="stat-label">成功请求</span>
+        </div>
+      </Card>
+      <Card>
+        <div class="stat-item">
+          <span class="stat-value text-danger">{{ statsStore.stats.failed_requests }}</span>
+          <span class="stat-label">失败请求</span>
+        </div>
+      </Card>
+      <Card>
+        <div class="stat-item">
+          <span class="stat-value text-warning">{{ statsStore.stats.total_retries }}</span>
+          <span class="stat-label">重试次数</span>
+        </div>
+      </Card>
+    </div>
+
     <!-- Status Card -->
     <Card class="status-card" title="配置方案">
       <template #header>
@@ -35,8 +63,41 @@
               {{ proxyStore.status === 'running' ? '运行中' : '已停止' }}
             </div>
             <div v-if="proxyStore.status === 'running'" class="status-info">
-              <span class="status-label">监听端口:</span>
-              <span class="status-value">{{ proxyStore.port }}</span>
+              <span class="status-label">Base URL:</span>
+              <div class="base-url-wrapper">
+                <span class="status-value">{{ baseUrl }}</span>
+                <button class="copy-btn" :class="{ copied: copied }" @click="copyBaseUrl">
+                  <svg
+                    v-if="!copied"
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="16"
+                    height="16"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  >
+                    <rect width="14" height="14" x="8" y="8" rx="2" ry="2" />
+                    <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2" />
+                  </svg>
+                  <svg
+                    v-else
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="16"
+                    height="16"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  >
+                    <polyline points="20 6 9 17 4 12" />
+                  </svg>
+                </button>
+              </div>
             </div>
           </div>
           <div class="status-actions">
@@ -54,34 +115,6 @@
         <div v-else class="status-empty">暂无方案，请点击「新建方案」</div>
       </div>
     </Card>
-
-    <!-- Quick Stats -->
-    <div class="quick-stats">
-      <Card>
-        <div class="stat-item">
-          <span class="stat-value">{{ statsStore.stats.total_requests }}</span>
-          <span class="stat-label">总请求数</span>
-        </div>
-      </Card>
-      <Card>
-        <div class="stat-item">
-          <span class="stat-value text-success">{{ statsStore.stats.successful_requests }}</span>
-          <span class="stat-label">成功请求</span>
-        </div>
-      </Card>
-      <Card>
-        <div class="stat-item">
-          <span class="stat-value text-danger">{{ statsStore.stats.failed_requests }}</span>
-          <span class="stat-label">失败请求</span>
-        </div>
-      </Card>
-      <Card>
-        <div class="stat-item">
-          <span class="stat-value text-warning">{{ statsStore.stats.total_retries }}</span>
-          <span class="stat-label">重试次数</span>
-        </div>
-      </Card>
-    </div>
 
     <!-- Create Profile Modal -->
     <DialogEditProfile v-model="showCreateModal" @create="handleCreateProfile" />
@@ -115,8 +148,27 @@ const statsStore = useStatsStore()
 const showCreateModal = ref(false)
 const showConfigModal = ref(false)
 const activeProfileId = ref<string>('')
+const copied = ref(false)
 
 const activeProfile = computed(() => configStore.activeProfile)
+
+const baseUrl = computed(() => {
+  if (!proxyStore.port) return ''
+  return `http://localhost:${proxyStore.port}`
+})
+
+async function copyBaseUrl() {
+  if (!baseUrl.value) return
+  try {
+    await navigator.clipboard.writeText(baseUrl.value)
+    copied.value = true
+    setTimeout(() => {
+      copied.value = false
+    }, 2000)
+  } catch (err) {
+    console.error('Failed to copy:', err)
+  }
+}
 
 const hasProfiles = computed(() => (configStore.config?.profiles?.length ?? 0) > 0)
 
@@ -258,6 +310,7 @@ onMounted(async () => {
   display: flex;
   gap: 8px;
   font-size: var(--font-md);
+  align-items: center;
 }
 
 .status-label {
@@ -265,14 +318,49 @@ onMounted(async () => {
 }
 
 .status-value {
-  color: var(--text-primary);
+  color: var(--color-primary);
   font-weight: 500;
+  font-family: var(--font-mono);
+  background: var(--bg-tertiary);
+  padding: 4px 12px;
+  border-radius: var(--radius-sm);
+}
+
+.base-url-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.copy-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: none;
+  background: var(--bg-tertiary);
+  border-radius: var(--radius-sm);
+  color: var(--text-tertiary);
+  cursor: pointer;
+  transition: all 0.2s;
+
+  &:hover {
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+  }
+
+  &.copied {
+    background: rgba(103, 194, 58, 0.1);
+    color: var(--color-success);
+  }
 }
 
 .quick-stats {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: var(--spacing-md);
+  margin-bottom: var(--spacing-lg);
 }
 
 .stat-item {
