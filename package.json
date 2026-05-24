@@ -8,7 +8,7 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "lint": "eslint . --fix && prettier --write . && vue-tsc --noEmit && cd src-tauri && cargo fmt && cargo clippy -- -D warnings",
+    "lint": "prettier --write . && eslint . && vue-tsc --noEmit && cd src-tauri && cargo fmt && cargo clippy -- -D warnings",
     "tauri": "tauri",
     "tauri:dev": "tauri dev",
     "tauri:build": "tauri build"
@@ -26,6 +26,7 @@
     "@types/node": "^20.11.0",
     "@vitejs/plugin-vue": "^5.0.4",
     "eslint": "^9.0.0",
+    "eslint-config-prettier": "10.1.8",
     "eslint-plugin-vue": "^9.22.0",
     "prettier": "^3.2.5",
     "sass": "^1.71.1",

@@ -2,6 +2,7 @@ import js from '@eslint/js'
 import tseslint from 'typescript-eslint'
 import pluginVue from 'eslint-plugin-vue'
 import vueParser from 'vue-eslint-parser'
+import prettier from 'eslint-config-prettier'
 
 export default tseslint.config(
   js.configs.recommended,
@@ -25,5 +26,6 @@ export default tseslint.config(
   },
   {
     ignores: ['node_modules', 'dist', 'src-tauri'],
-  }
+  },
+  prettier
 )
