@@ -6,9 +6,21 @@
     </div>
 
     <!-- Status Card -->
-    <Card class="status-card">
+    <Card class="status-card" title="配置方案">
       <template #header>
-        <span>服务状态</span>
+        <div class="card-header-content">
+          <div class="profile-selector-inline">
+            <Select
+              v-model="activeProfileId"
+              :options="profileOptions"
+              @update:model-value="handleProfileChange"
+            />
+            <Button type="default" @click="showCreateModal = true"> 新建方案 </Button>
+            <Button v-if="activeProfile" type="primary" @click="showConfigModal = true">
+              编辑方案
+            </Button>
+          </div>
+        </div>
       </template>
       <div class="status-content">
         <div class="status-main">
@@ -32,25 +44,6 @@
           </Button>
           <Button v-else type="danger" size="large" @click="handleStop"> 停止服务 </Button>
         </div>
-      </div>
-    </Card>
-
-    <!-- Profile Selection -->
-    <Card class="profile-card">
-      <template #header>
-        <span>配置方案</span>
-      </template>
-      <div class="profile-selector">
-        <Select
-          v-model="activeProfileId"
-          label="选择配置方案"
-          :options="profileOptions"
-          @update:model-value="handleProfileChange"
-        />
-        <Button type="default" @click="showCreateModal = true"> 新建方案 </Button>
-        <Button v-if="activeProfile" type="primary" @click="showConfigModal = true">
-          编辑方案
-        </Button>
       </div>
     </Card>
 
@@ -83,103 +76,16 @@
     </div>
 
     <!-- Create Profile Modal -->
-    <div v-if="showCreateModal" class="modal-overlay" @click.self="showCreateModal = false">
-      <div class="modal modal-large">
-        <h3 class="modal-title">新建配置方案</h3>
-        <div class="config-form">
-          <Input v-model="newProfile.name" label="方案名称" placeholder="输入方案名称" />
-          <Input
-            v-model.number="newProfile.local_port"
-            label="本地端口"
-            type="number"
-            placeholder="3000"
-          />
-          <Input
-            v-model="newProfile.target_base_url"
-            label="目标接口地址"
-            placeholder="https://api.example.com/v1"
-          />
-          <div class="form-row">
-            <Input
-              v-model.number="newProfile.max_retries"
-              label="最大重试次数"
-              type="number"
-              placeholder="3"
-            />
-            <Input
-              v-model.number="newProfile.retry_delay_ms"
-              label="重试延迟 (ms)"
-              type="number"
-              placeholder="1000"
-            />
-          </div>
-          <Input
-            v-model="newProfileRetryCodesText"
-            label="重试状态码 (逗号分隔)"
-            placeholder="429,500,502,503,504"
-          />
-        </div>
-        <div class="modal-actions">
-          <Button type="default" @click="showCreateModal = false"> 取消 </Button>
-          <Button type="primary" @click="handleCreateProfile"> 创建方案 </Button>
-        </div>
-      </div>
-    </div>
+    <DialogEditProfile v-model="showCreateModal" @create="handleCreateProfile" />
 
     <!-- Config Detail Modal -->
-    <div
-      v-if="showConfigModal && activeProfile"
-      class="modal-overlay"
-      @click.self="showConfigModal = false"
-    >
-      <div class="modal modal-large">
-        <h3 class="modal-title">配置详情</h3>
-        <div class="config-form">
-          <Input v-model="activeProfile.name" label="方案名称" placeholder="输入方案名称" />
-          <Input
-            v-model.number="activeProfile.local_port"
-            label="本地端口"
-            type="number"
-            placeholder="3000"
-          />
-          <Input
-            v-model="activeProfile.target_base_url"
-            label="目标接口地址"
-            placeholder="https://api.example.com/v1"
-          />
-          <div class="form-row">
-            <Input
-              v-model.number="activeProfile.max_retries"
-              label="最大重试次数"
-              type="number"
-              placeholder="3"
-            />
-            <Input
-              v-model.number="activeProfile.retry_delay_ms"
-              label="重试延迟 (ms)"
-              type="number"
-              placeholder="1000"
-            />
-          </div>
-          <Input
-            v-model="retryCodesText"
-            label="重试状态码 (逗号分隔)"
-            placeholder="429,500,502,503,504"
-          />
-        </div>
-        <div class="modal-actions">
-          <Button type="default" @click="showConfigModal = false"> 取消 </Button>
-          <Button
-            v-if="configStore.config?.profiles?.length ?? 0 > 1"
-            type="danger"
-            @click="handleDeleteProfileInModal"
-          >
-            删除方案
-          </Button>
-          <Button type="primary" @click="handleSaveConfigInModal"> 保存配置 </Button>
-        </div>
-      </div>
-    </div>
+    <DialogEditProfile
+      v-model="showConfigModal"
+      :profile="activeProfile"
+      :show-delete-button="(configStore.config?.profiles?.length ?? 0) > 1"
+      @save="handleSaveProfile"
+      @delete="handleDeleteProfile"
+    />
   </div>
 </template>
 
@@ -187,9 +93,10 @@
 import { ref, computed, onMounted, watch } from 'vue'
 import Card from '@/components/base/Card.vue'
 import Button from '@/components/base/Button.vue'
-import Input from '@/components/base/Input.vue'
 import Select from '@/components/base/Select.vue'
+import DialogEditProfile from '@/components/DialogEditProfile/DialogEditProfile.vue'
 import { useConfigStore } from '@/stores/config'
+import type { ProxyProfile } from '@/stores/config'
 import { useProxyStore } from '@/stores/proxy'
 import { useStatsStore } from '@/stores/stats'
 
@@ -201,25 +108,6 @@ const showCreateModal = ref(false)
 const showConfigModal = ref(false)
 const activeProfileId = ref<string>('')
 
-const newProfile = ref({
-  name: '',
-  local_port: 3000,
-  target_base_url: '',
-  max_retries: 3,
-  retry_delay_ms: 1000,
-  retry_status_codes: [429, 500, 502, 503, 504],
-})
-
-const newProfileRetryCodesText = computed({
-  get: () => newProfile.value.retry_status_codes.join(','),
-  set: (val: string) => {
-    newProfile.value.retry_status_codes = val
-      .split(',')
-      .map(s => parseInt(s.trim(), 10))
-      .filter(n => !isNaN(n))
-  },
-})
-
 const activeProfile = computed(() => configStore.activeProfile)
 
 const profileOptions = computed(() =>
@@ -228,18 +116,6 @@ const profileOptions = computed(() =>
     value: p.id,
   }))
 )
-
-const retryCodesText = computed({
-  get: () => activeProfile.value?.retry_status_codes.join(',') || '',
-  set: (val: string) => {
-    if (activeProfile.value) {
-      activeProfile.value.retry_status_codes = val
-        .split(',')
-        .map(s => parseInt(s.trim(), 10))
-        .filter(n => !isNaN(n))
-    }
-  },
-})
 
 watch(
   () => configStore.config?.active_profile_id,
@@ -261,33 +137,19 @@ async function handleProfileChange(id: string) {
   await configStore.setActiveProfile(id)
 }
 
-async function handleCreateProfile() {
-  if (newProfile.value.name.trim()) {
-    await configStore.createProfile({ ...newProfile.value })
-    newProfile.value = {
-      name: '',
-      local_port: 3000,
-      target_base_url: '',
-      max_retries: 3,
-      retry_delay_ms: 1000,
-      retry_status_codes: [429, 500, 502, 503, 504],
-    }
-    showCreateModal.value = false
-  }
+async function handleCreateProfile(profile: Omit<ProxyProfile, 'id'>) {
+  await configStore.createProfile(profile)
+  showCreateModal.value = false
 }
 
-async function handleSaveConfigInModal() {
-  if (activeProfile.value) {
-    await configStore.updateProfile(activeProfile.value)
-    showConfigModal.value = false
-  }
+async function handleSaveProfile(profile: ProxyProfile) {
+  await configStore.updateProfile(profile)
+  showConfigModal.value = false
 }
 
-async function handleDeleteProfileInModal() {
-  if (activeProfile.value && (configStore.config?.profiles?.length ?? 0) > 1) {
-    await configStore.deleteProfile(activeProfile.value.id)
-    showConfigModal.value = false
-  }
+async function handleDeleteProfile(id: string) {
+  await configStore.deleteProfile(id)
+  showConfigModal.value = false
 }
 
 onMounted(async () => {
@@ -321,6 +183,20 @@ onMounted(async () => {
 
 .status-card {
   margin-bottom: var(--spacing-lg);
+}
+
+.card-header-content {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-lg);
+}
+
+.profile-selector-inline {
+  display: flex;
+  gap: var(--spacing-md);
+  align-items: flex-end;
+  flex: 1;
 }
 
 .status-content {
@@ -377,34 +253,6 @@ onMounted(async () => {
   font-weight: 500;
 }
 
-.profile-card {
-  margin-bottom: var(--spacing-lg);
-}
-
-.profile-selector {
-  display: flex;
-  gap: var(--spacing-md);
-  align-items: flex-end;
-}
-
-.config-form {
-  display: flex;
-  flex-direction: column;
-  gap: var(--spacing-md);
-}
-
-.form-row {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: var(--spacing-md);
-}
-
-.form-actions {
-  display: flex;
-  gap: var(--spacing-md);
-  margin-top: var(--spacing-md);
-}
-
 .quick-stats {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
@@ -440,45 +288,5 @@ onMounted(async () => {
 
 .text-warning {
   color: var(--color-warning);
-}
-
-// Modal
-.modal-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-}
-
-.modal {
-  background: var(--bg-primary);
-  border-radius: var(--radius-lg);
-  padding: var(--spacing-lg);
-  width: 400px;
-  max-width: 90%;
-
-  &.modal-large {
-    width: 500px;
-    max-width: 95%;
-  }
-}
-
-.modal-title {
-  font-size: var(--font-xl);
-  font-weight: 600;
-  margin: 0 0 var(--spacing-md) 0;
-}
-
-.modal-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: var(--spacing-md);
-  margin-top: var(--spacing-lg);
 }
 </style>
