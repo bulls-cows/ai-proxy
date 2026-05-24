@@ -6,46 +6,46 @@
           {{ isEditMode ? '编辑方案' : '新建方案' }}
         </h3>
         <div class="config-form">
-          <Input v-model="formData.name" label="方案名称" placeholder="输入方案名称" />
-          <Input
+          <BaseInput v-model="formData.name" label="方案名称" placeholder="输入方案名称" />
+          <BaseInput
             v-model.number="formData.local_port"
             label="本地端口"
             type="number"
             placeholder="3000"
           />
-          <Input
+          <BaseInput
             v-model="formData.target_base_url"
             label="目标接口地址"
             placeholder="https://api.example.com/v1"
           />
           <div class="form-row">
-            <Input
+            <BaseInput
               v-model.number="formData.max_retries"
               label="最大重试次数"
               type="number"
               placeholder="3"
             />
-            <Input
+            <BaseInput
               v-model.number="formData.retry_delay_ms"
               label="重试延迟 (ms)"
               type="number"
               placeholder="1000"
             />
           </div>
-          <Input
+          <BaseInput
             v-model="retryCodesText"
             label="重试状态码 (逗号分隔)"
             placeholder="429,500,502,503,504"
           />
         </div>
         <div class="modal-actions">
-          <Button type="default" @click="handleClose"> 取消 </Button>
-          <Button v-if="isEditMode && showDeleteButton" type="danger" @click="handleDelete">
+          <BaseButton type="default" @click="handleClose"> 取消 </BaseButton>
+          <BaseButton v-if="isEditMode && showDeleteButton" type="danger" @click="handleDelete">
             删除方案
-          </Button>
-          <Button type="primary" @click="handleSubmit">
+          </BaseButton>
+          <BaseButton type="primary" @click="handleSubmit">
             {{ isEditMode ? '保存配置' : '创建方案' }}
-          </Button>
+          </BaseButton>
         </div>
       </div>
     </div>
@@ -54,8 +54,8 @@
 
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
-import Button from '@/components/base/Button.vue'
-import Input from '@/components/base/Input.vue'
+import BaseButton from '@/components/base/BaseButton.vue'
+import BaseInput from '@/components/base/BaseInput.vue'
 import type { ProxyProfile } from '@/stores/config'
 
 type ProfileFormData = Omit<ProxyProfile, 'id'> & { id?: string }

@@ -1,6 +1,6 @@
 <template>
   <div class="app">
-    <Sidebar />
+    <AppSidebar />
     <main class="main-content">
       <router-view />
     </main>
@@ -10,7 +10,7 @@
 <script setup lang="ts">
 import { onMounted, onUnmounted } from 'vue'
 import { getCurrentWindow } from '@tauri-apps/api/window'
-import Sidebar from '@/components/Sidebar.vue'
+import AppSidebar from '@/components/AppSidebar.vue'
 import { useProxyStore } from '@/stores/proxy'
 import { useStatsStore } from '@/stores/stats'
 

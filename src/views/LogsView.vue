@@ -3,12 +3,12 @@
     <div class="page-header">
       <h2 class="page-title">实时日志</h2>
       <div class="page-actions">
-        <Select v-model="levelFilter" :options="levelOptions" label="日志级别" />
-        <Button type="default" @click="onClearLogs"> 清空日志 </Button>
+        <BaseSelect v-model="levelFilter" :options="levelOptions" label="日志级别" />
+        <BaseButton type="default" @click="onClearLogs"> 清空日志 </BaseButton>
       </div>
     </div>
 
-    <Card class="logs-card">
+    <BaseCard class="logs-card">
       <div ref="logContainer" class="log-container">
         <div
           v-for="(log, index) in filteredLogs"
@@ -18,9 +18,9 @@
         >
           <div class="log-header">
             <span class="log-time">{{ formatTime(log.timestamp) }}</span>
-            <Tag :type="getTagType(log.level)">
+            <BaseTag :type="getTagType(log.level)">
               {{ log.level }}
-            </Tag>
+            </BaseTag>
             <span class="log-message">{{ log.message }}</span>
             <span class="log-expand-icon">
               {{ expandedLogs.includes(index) ? '▼' : '▶' }}
@@ -29,26 +29,26 @@
           <div v-if="expandedLogs.includes(index) && log.details" class="log-details">
             <div class="log-details-header">
               <span class="log-details-title">详细信息</span>
-              <Button
+              <BaseButton
                 type="default"
                 size="small"
                 @click.stop="onCopyLogDetails(log.details, index)"
               >
                 {{ copiedIndex === index ? '已复制' : '复制' }}
-              </Button>
+              </BaseButton>
             </div>
             <pre class="log-details-content">{{ formatDetails(log.details) }}</pre>
           </div>
         </div>
         <div v-if="filteredLogs.length === 0" class="log-empty">暂无日志</div>
       </div>
-    </Card>
+    </BaseCard>
   </div>
 </template>
 
 <script setup lang="ts">
 /**
- * Logs.vue - 实时日志页面组件
+ * LogsView.vue - 实时日志页面组件
  *
  * 业务职责：
  * - 展示代理服务的实时日志列表
@@ -75,10 +75,10 @@
 import { ref, computed, onMounted, nextTick, watch } from 'vue'
 
 // 基础组件
-import Card from '@/components/base/Card.vue'
-import Button from '@/components/base/Button.vue'
-import Select from '@/components/base/Select.vue'
-import Tag from '@/components/base/Tag.vue'
+import BaseCard from '@/components/base/BaseCard.vue'
+import BaseButton from '@/components/base/BaseButton.vue'
+import BaseSelect from '@/components/base/BaseSelect.vue'
+import BaseTag from '@/components/base/BaseTag.vue'
 
 // Pinia Stores
 import { useProxyStore } from '@/stores/proxy'

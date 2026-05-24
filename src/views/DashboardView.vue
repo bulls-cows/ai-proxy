@@ -7,57 +7,57 @@
 
     <!-- Quick Stats -->
     <div class="quick-stats">
-      <Card>
+      <BaseCard>
         <div class="quick-stats__item">
           <span class="quick-stats__value">{{ statsStore.stats.total_requests }}</span>
           <span class="quick-stats__label">总请求数</span>
         </div>
-      </Card>
-      <Card>
+      </BaseCard>
+      <BaseCard>
         <div class="quick-stats__item">
           <span class="quick-stats__value quick-stats__value--success">{{
             statsStore.stats.successful_requests
           }}</span>
           <span class="quick-stats__label">成功请求</span>
         </div>
-      </Card>
-      <Card>
+      </BaseCard>
+      <BaseCard>
         <div class="quick-stats__item">
           <span class="quick-stats__value quick-stats__value--danger">{{
             statsStore.stats.failed_requests
           }}</span>
           <span class="quick-stats__label">失败请求</span>
         </div>
-      </Card>
-      <Card>
+      </BaseCard>
+      <BaseCard>
         <div class="quick-stats__item">
           <span class="quick-stats__value quick-stats__value--warning">{{
             statsStore.stats.total_retries
           }}</span>
           <span class="quick-stats__label">重试次数</span>
         </div>
-      </Card>
+      </BaseCard>
     </div>
 
     <!-- Status Card -->
-    <Card class="home-page__status-card" title="配置方案">
+    <BaseCard class="home-page__status-card" title="配置方案">
       <template #header>
         <div class="card-header-content">
           <div class="profile-selector-inline">
-            <Select
+            <BaseSelect
               v-if="hasProfiles"
               v-model="activeProfileId"
               :options="profileOptions"
               @update:model-value="onProfileChange"
             />
-            <Button type="default" @click="showCreateModal = true"> 新建方案 </Button>
-            <Button
+            <BaseButton type="default" @click="showCreateModal = true"> 新建方案 </BaseButton>
+            <BaseButton
               v-if="hasProfiles && activeProfile"
               type="primary"
               @click="showConfigModal = true"
             >
               编辑方案
-            </Button>
+            </BaseButton>
           </div>
         </div>
       </template>
@@ -111,15 +111,15 @@
             </div>
           </div>
           <div class="status-actions">
-            <Button v-if="proxyStore.status === 'stopped'" type="primary" @click="onStartProxy">
+            <BaseButton v-if="proxyStore.status === 'stopped'" type="primary" @click="onStartProxy">
               启动服务
-            </Button>
-            <Button v-else type="danger" @click="onStopProxy"> 停止服务 </Button>
+            </BaseButton>
+            <BaseButton v-else type="danger" @click="onStopProxy"> 停止服务 </BaseButton>
           </div>
         </template>
         <div v-else class="status__empty">暂无方案，请点击「新建方案」</div>
       </div>
-    </Card>
+    </BaseCard>
 
     <!-- Create Profile Modal -->
     <DialogEditProfile v-model="showCreateModal" @create="onCreateProfile" />
@@ -134,13 +134,13 @@
     />
 
     <!-- Toast -->
-    <Toast :message="toastMessage" :visible="toastVisible" />
+    <BaseToast :message="toastMessage" :visible="toastVisible" />
   </div>
 </template>
 
 <script setup lang="ts">
 /**
- * Home.vue - 仪表盘页面组件
+ * DashboardView.vue - 仪表盘页面组件
  *
  * 业务职责：
  * - 展示代理服务的实时统计数据（总请求数、成功/失败请求、重试次数）
@@ -165,10 +165,10 @@
 import { ref, computed, onMounted, watch } from 'vue'
 
 // 基础组件
-import Card from '@/components/base/Card.vue'
-import Button from '@/components/base/Button.vue'
-import Select from '@/components/base/Select.vue'
-import Toast from '@/components/base/Toast.vue'
+import BaseCard from '@/components/base/BaseCard.vue'
+import BaseButton from '@/components/base/BaseButton.vue'
+import BaseSelect from '@/components/base/BaseSelect.vue'
+import BaseToast from '@/components/base/BaseToast.vue'
 
 // 业务组件
 import DialogEditProfile from '@/components/DialogEditProfile/DialogEditProfile.vue'
