@@ -6,6 +6,17 @@
 </template>
 
 <script setup lang="ts">
+/**
+ * BaseTag.vue - 基础标签组件
+ *
+ * 业务职责：
+ * - 提供多种颜色类型的标签组件
+ * - 支持默认、主要、成功、警告、危险、信息六种类型
+ * - 通过插槽自定义标签内容
+ *
+ * @author Auto Generated
+ * @since 2026-05-24
+ */
 // Props 定义
 defineProps<{
   // type: 标签类型 (default/primary/success/warning/danger/info)

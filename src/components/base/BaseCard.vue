@@ -20,6 +20,17 @@
 </template>
 
 <script setup lang="ts">
+/**
+ * BaseCard.vue - 基础卡片组件
+ *
+ * 业务职责：
+ * - 提供带标题和内容区域的卡片容器
+ * - 支持自定义头部插槽
+ * - 支持自定义底部插槽
+ *
+ * @author Auto Generated
+ * @since 2026-05-24
+ */
 // Props 定义
 defineProps<{
   // title: 卡片标题

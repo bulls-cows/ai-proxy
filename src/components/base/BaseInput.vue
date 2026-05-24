@@ -20,6 +20,19 @@
 </template>
 
 <script setup lang="ts">
+/**
+ * BaseInput.vue - 基础输入框组件
+ *
+ * 业务职责：
+ * - 提供带标签的输入框组件
+ * - 支持多种 input 类型
+ * - 支持禁用状态
+ * - 支持错误提示
+ * - 通过 v-model 双向绑定值
+ *
+ * @author Auto Generated
+ * @since 2026-05-24
+ */
 // Props 定义
 defineProps<{
   // modelValue: 绑定的值

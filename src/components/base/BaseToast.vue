@@ -11,6 +11,17 @@
 </template>
 
 <script setup lang="ts">
+/**
+ * BaseToast.vue - 轻提示组件
+ *
+ * 业务职责：
+ * - 提供全局轻提示消息
+ * - 支持淡入淡出过渡动画
+ * - 通过 Teleport 渲染到 body 元素
+ *
+ * @author Auto Generated
+ * @since 2026-05-24
+ */
 // Props 定义
 defineProps<{
   // message: 提示消息内容

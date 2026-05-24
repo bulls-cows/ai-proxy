@@ -60,6 +60,22 @@
 </template>
 
 <script setup lang="ts">
+/**
+ * DialogEditProfile.vue - 配置方案编辑弹窗组件
+ *
+ * 业务职责：
+ * - 提供新建和编辑配置方案的表单界面
+ * - 支持配置代理基本信息：方案名称、本地端口、目标地址
+ * - 支持配置重试策略：最大重试次数、重试延迟、重试状态码
+ * - 支持删除配置方案（编辑模式下）
+ *
+ * 数据流向：
+ * - 通过 props 接收编辑模式和现有配置数据
+ * - 通过 emits 发送保存、创建、删除事件
+ *
+ * @author Auto Generated
+ * @since 2026-05-24
+ */
 import { ref, computed, watch } from 'vue'
 import BaseButton from '@/components/base/BaseButton.vue'
 import BaseInput from '@/components/base/BaseInput.vue'

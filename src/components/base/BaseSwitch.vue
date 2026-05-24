@@ -19,6 +19,17 @@
 </template>
 
 <script setup lang="ts">
+/**
+ * BaseSwitch.vue - 基础开关组件
+ *
+ * 业务职责：
+ * - 提供带标签的开关切换组件
+ * - 支持禁用状态
+ * - 通过 v-model 双向绑定开关状态
+ *
+ * @author Auto Generated
+ * @since 2026-05-24
+ */
 // Props 定义
 const props = defineProps<{
   // modelValue: 开关状态

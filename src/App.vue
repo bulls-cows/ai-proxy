@@ -1,4 +1,5 @@
 <template>
+  <!-- App - 应用根组件 -->
   <div class="app">
     <AppSidebar />
     <main class="main-content">
@@ -8,6 +9,22 @@
 </template>
 
 <script setup lang="ts">
+/**
+ * App.vue - 应用根组件
+ *
+ * 业务职责：
+ * - 作为应用的根容器，布局侧边栏和主内容区域
+ * - 初始化代理和统计数据的事件监听器
+ * - 处理窗口关闭事件，隐藏窗口而不是直接关闭（最小化到托盘）
+ * - 在组件卸载时清理事件监听器
+ *
+ * 数据流向：
+ * - 依赖 useProxyStore 和 useStatsStore 管理状态
+ * - 通过 Tauri API 控制窗口行为
+ *
+ * @author Auto Generated
+ * @since 2026-05-24
+ */
 import { onMounted, onUnmounted } from 'vue'
 import { getCurrentWindow } from '@tauri-apps/api/window'
 import AppSidebar from '@/components/AppSidebar.vue'

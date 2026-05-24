@@ -23,6 +23,18 @@
 </template>
 
 <script setup lang="ts">
+/**
+ * BaseSelect.vue - 基础下拉选择组件
+ *
+ * 业务职责：
+ * - 提供带标签的下拉选择框
+ * - 支持自定义选项列表
+ * - 支持禁用状态
+ * - 通过 v-model 双向绑定选中值
+ *
+ * @author Auto Generated
+ * @since 2026-05-24
+ */
 // 选项类型定义
 interface Option {
   // label: 显示文本

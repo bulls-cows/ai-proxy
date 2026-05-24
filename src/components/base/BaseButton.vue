@@ -13,6 +13,18 @@
 </template>
 
 <script setup lang="ts">
+/**
+ * BaseButton.vue - 基础按钮组件
+ *
+ * 业务职责：
+ * - 提供多种样式类型的按钮：主要、成功、警告、危险、默认
+ * - 支持三种尺寸：小、中、大
+ * - 支持加载状态和禁用状态
+ * - 点击事件向外 emit
+ *
+ * @author Auto Generated
+ * @since 2026-05-24
+ */
 // Props 定义
 withDefaults(
   defineProps<{
