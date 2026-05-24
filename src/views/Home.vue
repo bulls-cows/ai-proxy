@@ -11,39 +11,47 @@
         <div class="card-header-content">
           <div class="profile-selector-inline">
             <Select
+              v-if="hasProfiles"
               v-model="activeProfileId"
               :options="profileOptions"
               @update:model-value="handleProfileChange"
             />
             <Button type="default" @click="showCreateModal = true"> 新建方案 </Button>
-            <Button v-if="activeProfile" type="primary" @click="showConfigModal = true">
+            <Button
+              v-if="hasProfiles && activeProfile"
+              type="primary"
+              @click="showConfigModal = true"
+            >
               编辑方案
             </Button>
           </div>
         </div>
       </template>
       <div class="status-content">
-        <div class="status-main">
-          <div :class="['status-badge', proxyStore.status]">
-            <span class="status-icon" />
-            {{ proxyStore.status === 'running' ? '运行中' : '已停止' }}
+        <template v-if="hasProfiles">
+          <div class="status-main">
+            <div :class="['status-badge', proxyStore.status]">
+              <span class="status-icon" />
+              {{ proxyStore.status === 'running' ? '运行中' : '已停止' }}
+            </div>
+            <div v-if="proxyStore.status === 'running'" class="status-info">
+              <span class="status-label">监听端口:</span>
+              <span class="status-value">{{ proxyStore.port }}</span>
+            </div>
           </div>
-          <div v-if="proxyStore.status === 'running'" class="status-info">
-            <span class="status-label">监听端口:</span>
-            <span class="status-value">{{ proxyStore.port }}</span>
+          <div class="status-actions">
+            <Button
+              v-if="proxyStore.status === 'stopped'"
+              type="primary"
+              size="large"
+              @click="handleStart"
+            >
+              启动服务
+            </Button>
+            <Button v-else type="danger" size="large" @click="handleStop"> 停止服务 </Button>
           </div>
-        </div>
-        <div class="status-actions">
-          <Button
-            v-if="proxyStore.status === 'stopped'"
-            type="primary"
-            size="large"
-            @click="handleStart"
-          >
-            启动服务
-          </Button>
-          <Button v-else type="danger" size="large" @click="handleStop"> 停止服务 </Button>
-        </div>
+        </template>
+        <div v-else class="status-empty">暂无方案，请点击「新建方案」</div>
       </div>
     </Card>
 
@@ -109,6 +117,8 @@ const showConfigModal = ref(false)
 const activeProfileId = ref<string>('')
 
 const activeProfile = computed(() => configStore.activeProfile)
+
+const hasProfiles = computed(() => (configStore.config?.profiles?.length ?? 0) > 0)
 
 const profileOptions = computed(() =>
   (configStore.config?.profiles || []).map(p => ({
@@ -203,6 +213,12 @@ onMounted(async () => {
   display: flex;
   align-items: center;
   justify-content: space-between;
+}
+
+.status-empty {
+  margin-left: auto;
+  color: var(--text-tertiary);
+  font-size: var(--font-md);
 }
 
 .status-main {

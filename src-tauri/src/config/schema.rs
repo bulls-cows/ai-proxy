@@ -21,20 +21,6 @@ pub struct ProxyProfile {
     pub retry_status_codes: Vec<u16>,
 }
 
-impl Default for ProxyProfile {
-    fn default() -> Self {
-        Self {
-            id: uuid::Uuid::new_v4().to_string(),
-            name: "Default".to_string(),
-            local_port: 3000,
-            target_base_url: String::new(),
-            max_retries: 3,
-            retry_delay_ms: 1000,
-            retry_status_codes: vec![429, 500, 502, 503, 504],
-        }
-    }
-}
-
 /// Application configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Config {
@@ -52,10 +38,9 @@ pub struct Config {
 
 impl Default for Config {
     fn default() -> Self {
-        let default_profile = ProxyProfile::default();
         Self {
-            profiles: vec![default_profile.clone()],
-            active_profile_id: Some(default_profile.id),
+            profiles: vec![],
+            active_profile_id: None,
             auto_start: false,
             minimize_to_tray: true,
             start_on_boot: false,
