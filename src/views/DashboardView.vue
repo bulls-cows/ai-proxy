@@ -1,11 +1,13 @@
 <template>
+  <!-- DashboardView - 仪表盘页面 -->
   <div class="home-page">
+    <!-- 页面头部 -->
     <div class="home-page__header">
       <h2 class="home-page__title">仪表盘</h2>
       <p class="home-page__desc">配置代理服务并启动</p>
     </div>
 
-    <!-- Quick Stats -->
+    <!-- 快捷统计卡片 -->
     <div class="quick-stats">
       <BaseCard>
         <div class="quick-stats__item">
@@ -39,7 +41,7 @@
       </BaseCard>
     </div>
 
-    <!-- Status Card -->
+    <!-- 状态卡片：配置方案 -->
     <BaseCard class="home-page__status-card" title="配置方案">
       <template #header>
         <div class="card-header-content">
@@ -61,22 +63,28 @@
           </div>
         </div>
       </template>
+      <!-- 状态内容区 -->
       <div class="status__content">
+        <!-- 条件: 有配置方案时显示状态 -->
         <template v-if="hasProfiles">
           <div class="status__main">
+            <!-- 状态徽章 -->
             <div :class="['status__badge', `status__badge--${proxyStore.status}`]">
               <span class="status__icon" />
               {{ proxyStore.status === 'running' ? '运行中' : '已停止' }}
             </div>
+            <!-- 条件: 运行中时显示 Base URL -->
             <div v-if="proxyStore.status === 'running'" class="status__info">
               <span class="status__label">Base URL:</span>
               <div class="base-url-wrapper">
                 <span class="status__value">{{ baseUrl }}</span>
+                <!-- 复制按钮 -->
                 <button
                   class="copy-btn"
                   :class="{ 'copy-btn--copied': copied }"
                   @click="copyBaseUrl"
                 >
+                  <!-- 条件: 复制完成后显示勾选图标 -->
                   <svg
                     v-if="!copied"
                     xmlns="http://www.w3.org/2000/svg"
@@ -110,21 +118,24 @@
               </div>
             </div>
           </div>
+          <!-- 操作按钮组 -->
           <div class="status-actions">
+            <!-- 条件: 根据代理状态显示启动/停止按钮 -->
             <BaseButton v-if="proxyStore.status === 'stopped'" type="primary" @click="onStartProxy">
               启动服务
             </BaseButton>
             <BaseButton v-else type="danger" @click="onStopProxy"> 停止服务 </BaseButton>
           </div>
         </template>
+        <!-- 条件: 无配置方案时显示空状态 -->
         <div v-else class="status__empty">暂无方案，请点击「新建方案」</div>
       </div>
     </BaseCard>
 
-    <!-- Create Profile Modal -->
+    <!-- 新建方案弹窗 -->
     <DialogEditProfile v-model="showCreateModal" @create="onCreateProfile" />
 
-    <!-- Config Detail Modal -->
+    <!-- 编辑方案弹窗 -->
     <DialogEditProfile
       v-model="showConfigModal"
       :profile="activeProfile"
@@ -133,7 +144,7 @@
       @delete="onDeleteProfile"
     />
 
-    <!-- Toast -->
+    <!-- Toast 提示 -->
     <BaseToast :message="toastMessage" :visible="toastVisible" />
   </div>
 </template>

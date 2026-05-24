@@ -1,5 +1,7 @@
 <template>
+  <!-- AppSidebar - 侧边导航栏 -->
   <aside class="sidebar">
+    <!-- 侧边栏头部：品牌信息 -->
     <div class="sidebar-header">
       <div class="sidebar-title-row">
         <h1 class="sidebar-title">
@@ -10,6 +12,7 @@
       <p class="sidebar-subtitle">AI 模型请求代理工具</p>
     </div>
 
+    <!-- 侧边栏导航菜单 -->
     <nav class="sidebar-nav">
       <router-link
         v-for="item in navItems"
@@ -23,7 +26,9 @@
       </router-link>
     </nav>
 
+    <!-- 侧边栏底部：窗口控制与状态 -->
     <div class="sidebar-footer">
+      <!-- 窗口置顶切换按钮 -->
       <button
         type="button"
         class="pin-toggle"
@@ -34,6 +39,7 @@
         <span>{{ isAlwaysOnTop ? '取消置顶' : '窗口置顶' }}</span>
       </button>
 
+      <!-- 代理服务状态指示器 -->
       <div class="status-indicator">
         <span :class="['status-dot', proxyStore.status]" />
         <span class="status-text">
@@ -45,6 +51,28 @@
 </template>
 
 <script setup lang="ts">
+/**
+ * AppSidebar.vue - 应用侧边栏组件
+ *
+ * 业务职责：
+ * - 提供应用品牌展示（名称、版本号）
+ * - 渲染导航菜单，支持路由跳转
+ * - 提供窗口置顶切换功能
+ * - 显示代理服务运行状态指示
+ *
+ * 数据来源：
+ * - store: useProxyStore (代理状态)、brandName (品牌名)、APP_VERSION (版本号)
+ * - vue-router: useRoute (当前路由)
+ * - @tauri-apps/api/window: getCurrentWindow (窗口控制)
+ *
+ * 交互关系：
+ * - emit: 无（纯展示组件）
+ * - 依赖组件: router-link (Vue Router)
+ * - 副作用: 窗口置顶状态通过 appWindow.setAlwaysOnTop 修改
+ *
+ * @author Auto Generated
+ * @since 2026-05-24
+ */
 import { h, ref } from 'vue'
 import { getCurrentWindow } from '@tauri-apps/api/window'
 import { useRoute } from 'vue-router'
@@ -102,6 +130,7 @@ async function toggleAlwaysOnTop() {
 </script>
 
 <style lang="scss" scoped>
+/* 侧边栏容器 */
 .sidebar {
   width: var(--sidebar-width);
   height: 100vh;
@@ -111,11 +140,13 @@ async function toggleAlwaysOnTop() {
   flex-direction: column;
 }
 
+/* 侧边栏 > 头部 */
 .sidebar-header {
   padding: var(--spacing-md);
   border-bottom: 1px solid var(--border-primary);
 }
 
+/* 侧边栏 > 头部 > 标题行 */
 .sidebar-title-row {
   display: flex;
   align-items: center;
@@ -124,6 +155,7 @@ async function toggleAlwaysOnTop() {
   margin-bottom: 4px;
 }
 
+/* 侧边栏 > 头部 > 标题 */
 .sidebar-title {
   font-size: var(--font-xl);
   font-weight: 600;
@@ -131,17 +163,20 @@ async function toggleAlwaysOnTop() {
   margin: 0;
 }
 
+/* 侧边栏 > 头部 > 副标题 */
 .sidebar-subtitle {
   font-size: var(--font-sm);
   color: var(--text-tertiary);
   margin: 0;
 }
 
+/* 侧边栏 > 导航菜单 */
 .sidebar-nav {
   flex: 1;
   padding: var(--spacing-md);
 }
 
+/* 侧边栏 > 导航菜单 > 导航项 */
 .nav-item {
   display: flex;
   align-items: center;
@@ -164,6 +199,7 @@ async function toggleAlwaysOnTop() {
   }
 }
 
+/* 侧边栏 > 导航菜单 > 图标 */
 .nav-icon {
   width: 20px;
   height: 20px;
@@ -172,16 +208,19 @@ async function toggleAlwaysOnTop() {
   justify-content: center;
 }
 
+/* 侧边栏 > 导航菜单 > 文字 */
 .nav-text {
   font-size: var(--font-md);
   font-weight: 500;
 }
 
+/* 侧边栏 > 底部 */
 .sidebar-footer {
   padding: var(--spacing-md);
   border-top: 1px solid var(--border-primary);
 }
 
+/* 侧边栏 > 底部 > 置顶按钮 */
 .pin-toggle {
   width: 100%;
   display: flex;
@@ -207,11 +246,13 @@ async function toggleAlwaysOnTop() {
   }
 }
 
+/* 侧边栏 > 底部 > 置顶图标 */
 .pin-icon {
   width: 16px;
   height: 16px;
 }
 
+/* 侧边栏 > 底部 > 状态指示器 */
 .status-indicator {
   display: flex;
   align-items: center;
@@ -219,6 +260,7 @@ async function toggleAlwaysOnTop() {
   padding: 10px 12px;
 }
 
+/* 侧边栏 > 底部 > 状态指示器 > 状态点 */
 .status-dot {
   width: 16px;
   height: 16px;
@@ -240,11 +282,13 @@ async function toggleAlwaysOnTop() {
   }
 }
 
+/* 侧边栏 > 底部 > 状态文字 */
 .status-text {
   font-size: var(--font-sm);
   color: var(--text-secondary);
 }
 
+/* 版本号 */
 .version {
   font-size: var(--font-xs);
   color: var(--text-tertiary);

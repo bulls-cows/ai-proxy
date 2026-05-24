@@ -1,16 +1,20 @@
 <template>
+  <!-- BaseTag - 基础标签组件 -->
   <span :class="['tag', `tag-${type}`]">
     <slot />
   </span>
 </template>
 
 <script setup lang="ts">
+// Props 定义
 defineProps<{
+  // type: 标签类型 (default/primary/success/warning/danger/info)
   type?: 'default' | 'primary' | 'success' | 'warning' | 'danger' | 'info'
 }>()
 </script>
 
 <style lang="scss" scoped>
+/* 标签基础样式 */
 .tag {
   display: inline-flex;
   align-items: center;
@@ -20,6 +24,7 @@ defineProps<{
   border-radius: var(--radius-sm);
 }
 
+/* 标签 > 类型 */
 .tag-default {
   background: var(--bg-tertiary);
   color: var(--text-primary);

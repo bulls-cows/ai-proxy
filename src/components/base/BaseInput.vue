@@ -1,6 +1,9 @@
 <template>
+  <!-- BaseInput - 基础输入框组件 -->
   <div class="input-wrapper">
+    <!-- 输入框标签 -->
     <label v-if="label" class="input-label">{{ label }}</label>
+    <!-- 输入框容器 -->
     <div class="input-container" :class="{ 'input-error': error }">
       <input
         :type="type"
@@ -11,38 +14,51 @@
         @input="$emit('update:modelValue', ($event.target as HTMLInputElement).value)"
       />
     </div>
+    <!-- 错误提示文字 -->
     <span v-if="error" class="input-error-text">{{ error }}</span>
   </div>
 </template>
 
 <script setup lang="ts">
+// Props 定义
 defineProps<{
+  // modelValue: 绑定的值
   modelValue: string | number
+  // label: 输入框标签
   label?: string
+  // type: input 类型
   type?: string
+  // placeholder: 占位符
   placeholder?: string
+  // disabled: 禁用状态
   disabled?: boolean
+  // error: 错误提示
   error?: string
 }>()
 
+// Emits 定义
 defineEmits<{
+  // update:modelValue: 值变更事件
   'update:modelValue': [value: string]
 }>()
 </script>
 
 <style lang="scss" scoped>
+/* 输入框外层容器 */
 .input-wrapper {
   display: flex;
   flex-direction: column;
   gap: 6px;
 }
 
+/* 输入框标签 */
 .input-label {
   font-size: var(--font-md);
   color: var(--text-primary);
   font-weight: 500;
 }
 
+/* 输入框容器 */
 .input-container {
   display: flex;
   align-items: center;
@@ -61,6 +77,7 @@ defineEmits<{
   }
 }
 
+/* 输入框字段 */
 .input-field {
   flex: 1;
   padding: 10px 12px;
@@ -80,6 +97,7 @@ defineEmits<{
   }
 }
 
+/* 输入框错误提示 */
 .input-error-text {
   font-size: var(--font-xs);
   color: var(--color-danger);

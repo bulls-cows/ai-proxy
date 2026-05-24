@@ -1,6 +1,8 @@
 <template>
+  <!-- BaseToast - 轻提示组件 -->
   <Teleport to="body">
     <Transition name="toast">
+      <!-- 提示消息 -->
       <div v-if="visible" class="toast">
         {{ message }}
       </div>
@@ -9,13 +11,17 @@
 </template>
 
 <script setup lang="ts">
+// Props 定义
 defineProps<{
+  // message: 提示消息内容
   message: string
+  // visible: 是否显示
   visible: boolean
 }>()
 </script>
 
 <style lang="scss" scoped>
+/* 提示框样式 */
 .toast {
   position: fixed;
   top: 80px;
@@ -29,6 +35,7 @@ defineProps<{
   z-index: 9999;
 }
 
+/* 提示框过渡动画 */
 .toast-enter-active,
 .toast-leave-active {
   transition:

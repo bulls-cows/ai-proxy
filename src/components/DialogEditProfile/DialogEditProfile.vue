@@ -1,10 +1,15 @@
 <template>
+  <!-- DialogEditProfile - 配置方案编辑弹窗 -->
   <Teleport to="body">
+    <!-- 模态框遮罩层 -->
     <div v-if="modelValue" class="modal-overlay" @click.self="handleClose">
+      <!-- 模态框主体 -->
       <div class="modal modal-large">
+        <!-- 模态框标题 -->
         <h3 class="modal-title">
           {{ isEditMode ? '编辑方案' : '新建方案' }}
         </h3>
+        <!-- 配置表单 -->
         <div class="config-form">
           <BaseInput v-model="formData.name" label="方案名称" placeholder="输入方案名称" />
           <BaseInput
@@ -18,6 +23,7 @@
             label="目标接口地址"
             placeholder="https://api.example.com/v1"
           />
+          <!-- 表单行：最大重试次数 & 重试延迟 -->
           <div class="form-row">
             <BaseInput
               v-model.number="formData.max_retries"
@@ -38,6 +44,7 @@
             placeholder="429,500,502,503,504"
           />
         </div>
+        <!-- 操作按钮组 -->
         <div class="modal-actions">
           <BaseButton type="default" @click="handleClose"> 取消 </BaseButton>
           <BaseButton v-if="isEditMode && showDeleteButton" type="danger" @click="handleDelete">
@@ -58,11 +65,16 @@ import BaseButton from '@/components/base/BaseButton.vue'
 import BaseInput from '@/components/base/BaseInput.vue'
 import type { ProxyProfile } from '@/stores/config'
 
+// 表单数据类型（包含可选 id）
 type ProfileFormData = Omit<ProxyProfile, 'id'> & { id?: string }
 
+// Props 定义
 interface Props {
+  // modelValue: 弹窗显示状态
   modelValue: boolean
+  // profile: 要编辑的配置方案（null 表示新建模式）
   profile?: ProxyProfile | null
+  // showDeleteButton: 是否显示删除按钮
   showDeleteButton?: boolean
 }
 
@@ -71,13 +83,19 @@ const props = withDefaults(defineProps<Props>(), {
   showDeleteButton: true,
 })
 
+// Emits 定义
 const emit = defineEmits<{
+  // update:modelValue: 弹窗显示状态变更
   'update:modelValue': [value: boolean]
+  // save: 保存配置方案事件
   save: [profile: ProxyProfile]
+  // create: 新建配置方案事件
   create: [profile: Omit<ProxyProfile, 'id'>]
+  // delete: 删除配置方案事件
   delete: [id: string]
 }>()
 
+// 默认表单数据工厂函数
 const defaultProfile = (): ProfileFormData => ({
   name: '',
   local_port: 3000,
@@ -87,10 +105,13 @@ const defaultProfile = (): ProfileFormData => ({
   retry_status_codes: [429, 500, 502, 503, 504],
 })
 
+// ref: 表单数据
 const formData = ref<ProfileFormData>(defaultProfile())
 
+// computed: 是否为编辑模式
 const isEditMode = computed(() => props.profile !== null)
 
+// computed: 重试状态码文本（用于输入框显示）
 const retryCodesText = computed({
   get: () => formData.value.retry_status_codes.join(','),
   set: (val: string) => {
@@ -101,6 +122,7 @@ const retryCodesText = computed({
   },
 })
 
+// watch: 监听 modelValue 变化，打开弹窗时重置表单
 watch(
   () => props.modelValue,
   visible => {
@@ -114,10 +136,16 @@ watch(
   }
 )
 
+/**
+ * 关闭弹窗
+ */
 function handleClose() {
   emit('update:modelValue', false)
 }
 
+/**
+ * 提交表单
+ */
 function handleSubmit() {
   if (isEditMode.value && formData.value.id) {
     emit('save', formData.value as ProxyProfile)
@@ -134,6 +162,9 @@ function handleSubmit() {
   }
 }
 
+/**
+ * 删除配置方案
+ */
 function handleDelete() {
   if (props.profile) {
     emit('delete', props.profile.id)
@@ -142,6 +173,7 @@ function handleDelete() {
 </script>
 
 <style lang="scss" scoped>
+/* 模态框遮罩层 */
 .modal-overlay {
   position: fixed;
   top: 0;
@@ -155,6 +187,7 @@ function handleDelete() {
   z-index: 1000;
 }
 
+/* 模态框容器 */
 .modal {
   background: var(--bg-primary);
   border-radius: var(--radius-lg);
@@ -168,24 +201,28 @@ function handleDelete() {
   }
 }
 
+/* 模态框标题 */
 .modal-title {
   font-size: var(--font-xl);
   font-weight: 600;
   margin: 0 0 var(--spacing-md) 0;
 }
 
+/* 配置表单 */
 .config-form {
   display: flex;
   flex-direction: column;
   gap: var(--spacing-md);
 }
 
+/* 表单行 */
 .form-row {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: var(--spacing-md);
 }
 
+/* 操作按钮组 */
 .modal-actions {
   display: flex;
   justify-content: flex-end;

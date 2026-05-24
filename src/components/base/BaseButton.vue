@@ -1,20 +1,28 @@
 <template>
+  <!-- BaseButton - 基础按钮组件 -->
   <button
     :class="['btn', `btn-${type}`, `btn-${size}`, { 'btn-loading': loading }]"
     :disabled="disabled || loading"
     @click="$emit('click', $event)"
   >
+    <!-- 加载状态指示器 -->
     <span v-if="loading" class="btn-spinner" />
+    <!-- 按钮内容插槽 -->
     <slot />
   </button>
 </template>
 
 <script setup lang="ts">
+// Props 定义
 withDefaults(
   defineProps<{
+    // type: 按钮类型 (primary/success/warning/danger/default)
     type?: 'primary' | 'success' | 'warning' | 'danger' | 'default'
+    // size: 按钮尺寸 (small/medium/large)
     size?: 'small' | 'medium' | 'large'
+    // loading: 加载状态
     loading?: boolean
+    // disabled: 禁用状态
     disabled?: boolean
   }>(),
   {
@@ -23,12 +31,15 @@ withDefaults(
   }
 )
 
+// Emits 定义
 defineEmits<{
+  // click: 点击事件
   click: [event: MouseEvent]
 }>()
 </script>
 
 <style lang="scss" scoped>
+/* 按钮基础样式 */
 .btn {
   display: inline-flex;
   align-items: center;
@@ -49,7 +60,7 @@ defineEmits<{
   }
 }
 
-// Sizes
+/* 按钮 > 尺寸 */
 .btn-small {
   padding: 6px 12px;
   font-size: var(--font-sm);
@@ -65,7 +76,7 @@ defineEmits<{
   font-size: var(--font-lg);
 }
 
-// Types
+/* 按钮 > 类型 */
 .btn-default {
   background: var(--bg-primary);
   border-color: var(--border-primary);
@@ -113,7 +124,7 @@ defineEmits<{
   }
 }
 
-// Loading spinner
+/* 按钮 > 加载状态指示器 */
 .btn-spinner {
   width: 14px;
   height: 14px;

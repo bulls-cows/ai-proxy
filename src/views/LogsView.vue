@@ -1,21 +1,28 @@
 <template>
+  <!-- LogsView - 实时日志页面 -->
   <div class="logs-page">
+    <!-- 页面头部 -->
     <div class="page-header">
       <h2 class="page-title">实时日志</h2>
+      <!-- 操作按钮组 -->
       <div class="page-actions">
         <BaseSelect v-model="levelFilter" :options="levelOptions" label="日志级别" />
         <BaseButton type="default" @click="onClearLogs"> 清空日志 </BaseButton>
       </div>
     </div>
 
+    <!-- 日志列表卡片 -->
     <BaseCard class="logs-card">
+      <!-- 日志容器 -->
       <div ref="logContainer" class="log-container">
+        <!-- 循环: 日志条目列表 -->
         <div
           v-for="(log, index) in filteredLogs"
           :key="index"
           :class="['log-entry', `log-${log.level.toLowerCase()}`]"
           @click="onToggleLogExpand(index)"
         >
+          <!-- 日志头部 -->
           <div class="log-header">
             <span class="log-time">{{ formatTime(log.timestamp) }}</span>
             <BaseTag :type="getTagType(log.level)">
@@ -26,7 +33,9 @@
               {{ expandedLogs.includes(index) ? '▼' : '▶' }}
             </span>
           </div>
+          <!-- 条件: 展开时显示详情 -->
           <div v-if="expandedLogs.includes(index) && log.details" class="log-details">
+            <!-- 详情头部 -->
             <div class="log-details-header">
               <span class="log-details-title">详细信息</span>
               <BaseButton
@@ -37,9 +46,11 @@
                 {{ copiedIndex === index ? '已复制' : '复制' }}
               </BaseButton>
             </div>
+            <!-- 详情内容 -->
             <pre class="log-details-content">{{ formatDetails(log.details) }}</pre>
           </div>
         </div>
+        <!-- 条件: 无日志时显示空状态 -->
         <div v-if="filteredLogs.length === 0" class="log-empty">暂无日志</div>
       </div>
     </BaseCard>
@@ -214,12 +225,14 @@ onMounted(() => {
 </script>
 
 <style lang="scss" scoped>
+/* 日志页面容器 */
 .logs-page {
   display: flex;
   flex-direction: column;
   height: calc(100vh - 48px);
 }
 
+/* 页面头部 */
 .page-header {
   display: flex;
   justify-content: space-between;
@@ -227,6 +240,7 @@ onMounted(() => {
   margin-bottom: var(--spacing-lg);
 }
 
+/* 页面标题 */
 .page-title {
   font-size: 24px;
   font-weight: 600;
@@ -234,12 +248,14 @@ onMounted(() => {
   margin: 0;
 }
 
+/* 操作按钮组 */
 .page-actions {
   display: flex;
   gap: var(--spacing-md);
   align-items: flex-end;
 }
 
+/* 日志卡片 */
 .logs-card {
   flex: 1;
   display: flex;
@@ -253,6 +269,7 @@ onMounted(() => {
   }
 }
 
+/* 日志容器 */
 .log-container {
   height: 100%;
   max-height: calc(100vh - 200px);
@@ -262,6 +279,7 @@ onMounted(() => {
   padding: var(--spacing-md);
 }
 
+/* 日志条目 */
 .log-entry {
   display: flex;
   flex-direction: column;
@@ -276,29 +294,34 @@ onMounted(() => {
   }
 }
 
+/* 日志条目 > 头部 */
 .log-header {
   display: flex;
   align-items: flex-start;
   gap: 12px;
 }
 
+/* 日志条目 > 头部 > 时间 */
 .log-time {
   color: var(--text-tertiary);
   font-size: var(--font-xs);
   white-space: nowrap;
 }
 
+/* 日志条目 > 头部 > 消息 */
 .log-message {
   flex: 1;
   color: var(--text-primary);
   word-break: break-all;
 }
 
+/* 日志条目 > 头部 > 展开图标 */
 .log-expand-icon {
   color: var(--text-tertiary);
   font-size: var(--font-xs);
 }
 
+/* 日志详情 */
 .log-details {
   margin-top: 8px;
   padding: 8px 12px;
@@ -307,6 +330,7 @@ onMounted(() => {
   border: 1px solid var(--border-primary);
 }
 
+/* 日志详情 > 头部 */
 .log-details-header {
   display: flex;
   justify-content: space-between;
@@ -316,11 +340,13 @@ onMounted(() => {
   border-bottom: 1px solid var(--border-primary);
 }
 
+/* 日志详情 > 标题 */
 .log-details-title {
   font-size: var(--font-xs);
   color: var(--text-tertiary);
 }
 
+/* 日志详情 > 内容 */
 .log-details-content {
   margin: 0;
   padding: 0;
@@ -331,6 +357,7 @@ onMounted(() => {
   overflow-x: auto;
 }
 
+/* 日志级别样式 */
 .log-info {
   border-left: 3px solid var(--color-info);
 }
@@ -345,6 +372,7 @@ onMounted(() => {
   background: rgba(245, 108, 108, 0.05);
 }
 
+/* 空状态 */
 .log-empty {
   display: flex;
   align-items: center;

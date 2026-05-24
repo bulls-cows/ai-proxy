@@ -1,6 +1,9 @@
 <template>
+  <!-- BaseSwitch - 基础开关组件 -->
   <label class="switch-wrapper">
+    <!-- 开关标签 -->
     <span v-if="label" class="switch-label">{{ label }}</span>
+    <!-- 开关主体 -->
     <button
       type="button"
       role="switch"
@@ -9,22 +12,32 @@
       :disabled="disabled"
       @click="toggle"
     >
+      <!-- 开关滑块 -->
       <span class="switch-thumb" />
     </button>
   </label>
 </template>
 
 <script setup lang="ts">
+// Props 定义
 const props = defineProps<{
+  // modelValue: 开关状态
   modelValue: boolean
+  // label: 开关标签
   label?: string
+  // disabled: 禁用状态
   disabled?: boolean
 }>()
 
+// Emits 定义
 const emit = defineEmits<{
+  // update:modelValue: 状态变更事件
   'update:modelValue': [value: boolean]
 }>()
 
+/**
+ * 切换开关状态
+ */
 function toggle() {
   if (!props.disabled) {
     emit('update:modelValue', !props.modelValue)
@@ -33,6 +46,7 @@ function toggle() {
 </script>
 
 <style lang="scss" scoped>
+/* 开关外层容器 */
 .switch-wrapper {
   display: inline-flex;
   align-items: center;
@@ -40,11 +54,13 @@ function toggle() {
   cursor: pointer;
 }
 
+/* 开关标签 */
 .switch-label {
   font-size: var(--font-md);
   color: var(--text-primary);
 }
 
+/* 开关主体 */
 .switch {
   position: relative;
   width: 44px;
@@ -62,15 +78,18 @@ function toggle() {
   }
 }
 
+/* 开关 > 开启状态 */
 .switch-on {
   background: var(--color-primary);
 }
 
+/* 开关 > 禁用状态 */
 .switch-disabled {
   opacity: 0.6;
   cursor: not-allowed;
 }
 
+/* 开关 > 滑块 */
 .switch-thumb {
   position: absolute;
   top: 2px;
@@ -83,6 +102,7 @@ function toggle() {
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
 
+/* 开关 > 开启状态 > 滑块位置 */
 .switch-on .switch-thumb {
   transform: translateX(22px);
 }
