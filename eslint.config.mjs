@@ -21,7 +21,6 @@ export default tseslint.config(
     },
     rules: {
       '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_' }],
-      'vue/multi-word-component-names': 'off',
     },
   },
   {
