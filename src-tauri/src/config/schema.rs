@@ -19,6 +19,12 @@ pub struct ProxyProfile {
     pub retry_delay_ms: u64,
     /// HTTP status codes that should trigger a retry
     pub retry_status_codes: Vec<u16>,
+    /// Timeout for receiving the first response byte in milliseconds
+    pub first_byte_timeout_ms: u64,
+    /// Timeout for receiving the full non-streaming response in milliseconds
+    pub full_response_timeout_ms: u64,
+    /// Timeout between streaming chunks in milliseconds
+    pub stream_idle_timeout_ms: u64,
 }
 
 /// Application configuration

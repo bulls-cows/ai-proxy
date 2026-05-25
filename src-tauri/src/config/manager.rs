@@ -76,6 +76,9 @@ impl ConfigManager {
         }
         let mut config = self.config.lock().unwrap();
         config.profiles.push(profile.clone());
+        if config.active_profile_id.is_none() {
+            config.active_profile_id = Some(profile.id.clone());
+        }
         drop(config);
         self.save_config(&self.get_config())?;
         Ok(profile)

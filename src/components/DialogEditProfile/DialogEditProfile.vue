@@ -38,6 +38,26 @@
               placeholder="1000"
             />
           </div>
+          <div class="form-row">
+            <BaseInput
+              v-model.number="formData.first_byte_timeout_ms"
+              label="首个响应字节超时 (ms)"
+              type="number"
+              placeholder="0"
+            />
+            <BaseInput
+              v-model.number="formData.full_response_timeout_ms"
+              label="完整响应超时 (ms)"
+              type="number"
+              placeholder="0"
+            />
+          </div>
+          <BaseInput
+            v-model.number="formData.stream_idle_timeout_ms"
+            label="流式响应空闲超时 (ms)"
+            type="number"
+            placeholder="0"
+          />
           <BaseInput
             v-model="retryCodesText"
             label="重试状态码 (逗号分隔)"
@@ -119,6 +139,9 @@ const defaultProfile = (): ProfileFormData => ({
   max_retries: 3,
   retry_delay_ms: 1000,
   retry_status_codes: [429, 500, 502, 503, 504],
+  first_byte_timeout_ms: 0,
+  full_response_timeout_ms: 0,
+  stream_idle_timeout_ms: 0,
 })
 
 // ref: 表单数据
@@ -173,6 +196,9 @@ function handleSubmit() {
       max_retries: formData.value.max_retries,
       retry_delay_ms: formData.value.retry_delay_ms,
       retry_status_codes: formData.value.retry_status_codes,
+      first_byte_timeout_ms: formData.value.first_byte_timeout_ms,
+      full_response_timeout_ms: formData.value.full_response_timeout_ms,
+      stream_idle_timeout_ms: formData.value.stream_idle_timeout_ms,
     }
     emit('create', createData)
   }

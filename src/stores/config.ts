@@ -31,6 +31,9 @@ export interface ProxyProfile {
   max_retries: number
   retry_delay_ms: number
   retry_status_codes: number[]
+  first_byte_timeout_ms: number
+  full_response_timeout_ms: number
+  stream_idle_timeout_ms: number
 }
 
 /**

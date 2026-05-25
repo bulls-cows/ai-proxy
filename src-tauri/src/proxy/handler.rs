@@ -1,16 +1,84 @@
 //! Request handler with retry logic
-
 use axum::{
-    body::Body,
+    body::{Body, Bytes},
     extract::{Request, State},
-    http::{Method, StatusCode},
+    http::{HeaderMap, Method, StatusCode},
     response::{IntoResponse, Response},
 };
 use reqwest::Client;
-use std::time::Duration;
-use tokio_stream::StreamExt;
+use std::{io, pin::Pin, time::Duration};
+use tokio::sync::mpsc;
+use tokio_stream::{wrappers::ReceiverStream, Stream, StreamExt};
 
 use super::server::{LogEntry, ProxyState};
+
+type UpstreamByteStream =
+    Pin<Box<dyn Stream<Item = Result<Bytes, reqwest::Error>> + Send + 'static>>;
+
+#[derive(Clone, Copy)]
+enum RetryReason {
+    StatusCode(u16),
+    TransportError,
+    FirstByteTimeout,
+    FullResponseTimeout,
+    StreamIdleTimeout,
+}
+
+impl RetryReason {
+    fn detail_type(self) -> &'static str {
+        match self {
+            Self::StatusCode(_) => "retry_status_code",
+            Self::TransportError => "retry_transport_error",
+            Self::FirstByteTimeout => "retry_first_byte_timeout",
+            Self::FullResponseTimeout => "retry_full_response_timeout",
+            Self::StreamIdleTimeout => "retry_stream_idle_timeout",
+        }
+    }
+
+    fn label(self) -> &'static str {
+        match self {
+            Self::StatusCode(_) => "status code",
+            Self::TransportError => "transport error",
+            Self::FirstByteTimeout => "first byte timeout",
+            Self::FullResponseTimeout => "full response timeout",
+            Self::StreamIdleTimeout => "stream idle timeout",
+        }
+    }
+}
+
+struct RequestTemplate {
+    method: Method,
+    headers: HeaderMap,
+    body_bytes: Bytes,
+}
+
+impl RequestTemplate {
+    fn new(parts: axum::http::request::Parts, body_bytes: Bytes) -> Self {
+        Self {
+            method: parts.method,
+            headers: parts.headers,
+            body_bytes,
+        }
+    }
+
+    fn method(&self) -> Method {
+        Method::from_bytes(self.method.as_str().as_bytes()).unwrap()
+    }
+}
+
+struct StreamSession {
+    status: reqwest::StatusCode,
+    headers: HeaderMap,
+    first_chunk: Bytes,
+    stream: UpstreamByteStream,
+}
+
+struct RetryLogContext<'a> {
+    path: &'a str,
+    target_url: &'a str,
+    timeout_ms: Option<u64>,
+    error: Option<String>,
+}
 
 /// Main proxy handler
 pub async fn proxy_handler(
@@ -20,11 +88,8 @@ pub async fn proxy_handler(
     let uri = request.uri().clone();
     let path = uri.path().to_string();
     let method = request.method().clone();
-
-    // Build target URL
     let target_url = format!("{}{}", state.profile.target_base_url, path);
 
-    // Read body first to check for streaming flag
     let (parts, body) = request.into_parts();
     let body_bytes = match axum::body::to_bytes(body, 100 * 1024 * 1024).await {
         Ok(b) => b,
@@ -43,20 +108,18 @@ pub async fn proxy_handler(
         }
     };
 
-    // Check if streaming request (via Accept header or body content)
     let is_streaming =
         is_streaming_request_by_headers(&parts.headers) || is_streaming_body(&body_bytes);
+    let request_template = RequestTemplate::new(parts, body_bytes);
 
-    // Handle streaming vs regular requests
     if is_streaming {
-        handle_streaming_request_with_body(state, parts, body_bytes, target_url, method, path).await
+        handle_streaming_request_with_body(state, request_template, target_url, method, path).await
     } else {
-        handle_regular_request_with_body(state, parts, body_bytes, target_url, method, path).await
+        handle_regular_request_with_body(state, request_template, target_url, method, path).await
     }
 }
 
-/// Check if request headers indicate streaming
-fn is_streaming_request_by_headers(headers: &axum::http::HeaderMap) -> bool {
+fn is_streaming_request_by_headers(headers: &HeaderMap) -> bool {
     if let Some(accept) = headers.get("accept") {
         if let Ok(accept_str) = accept.to_str() {
             if accept_str.contains("text/event-stream") {
@@ -67,18 +130,14 @@ fn is_streaming_request_by_headers(headers: &axum::http::HeaderMap) -> bool {
     false
 }
 
-/// Check if request body indicates streaming (contains "stream": true)
 fn is_streaming_body(body: &[u8]) -> bool {
     let body_str = String::from_utf8_lossy(body);
-    // Check for "stream": true or "stream":true in JSON body
     body_str.contains("\"stream\":true") || body_str.contains("\"stream\": true")
 }
 
-/// Truncate string to max length (by characters, not bytes)
 fn truncate_string(s: &str, max_chars: usize) -> String {
     let char_count = s.chars().count();
     if char_count > max_chars {
-        // Find the byte position at max_chars character boundary
         if let Some((idx, _)) = s.char_indices().nth(max_chars) {
             format!("{}... (truncated, {} chars total)", &s[..idx], char_count)
         } else {
@@ -89,10 +148,8 @@ fn truncate_string(s: &str, max_chars: usize) -> String {
     }
 }
 
-/// Format bytes as string, handling JSON specially
 fn format_body(bytes: &[u8], max_len: usize) -> String {
     let s = String::from_utf8_lossy(bytes);
-    // Try to parse as JSON and pretty print
     if let Ok(json) = serde_json::from_str::<serde_json::Value>(&s) {
         let pretty = serde_json::to_string_pretty(&json).unwrap_or_else(|_| s.to_string());
         truncate_string(&pretty, max_len)
@@ -101,236 +158,27 @@ fn format_body(bytes: &[u8], max_len: usize) -> String {
     }
 }
 
-/// Handle regular (non-streaming) request with retry
-async fn handle_regular_request_with_body(
-    state: std::sync::Arc<ProxyState>,
-    parts: axum::http::request::Parts,
-    body_bytes: axum::body::Bytes,
-    target_url: String,
-    method: Method,
-    path: String,
-) -> Response {
-    // Extract request headers
-    let req_headers: serde_json::Map<String, serde_json::Value> = parts
-        .headers
-        .iter()
-        .filter_map(|(k, v)| {
-            v.to_str()
-                .ok()
-                .map(|s| (k.to_string(), serde_json::Value::String(s.to_string())))
-        })
-        .collect();
-
-    // Log incoming request with details
-    let _ = state.log_sender.send(LogEntry {
-        timestamp: chrono::Local::now().to_rfc3339(),
-        level: "INFO".to_string(),
-        message: format!(">>> {} {}", method, path),
-        details: Some(serde_json::json!({
-            "type": "request",
-            "method": method.to_string(),
-            "path": path,
-            "target": target_url,
-            "headers": req_headers,
-            "body": format_body(&body_bytes, 2000),
-        })),
-    });
-
-    let mut attempt = 0;
-    let max_retries = state.profile.max_retries;
-
-    // Create HTTP client
-    let client = Client::builder()
-        .timeout(Duration::from_secs(120))
-        .build()
-        .unwrap();
-
-    loop {
-        // Build request
-        let mut req_builder = client.request(
-            Method::from_bytes(parts.method.as_str().as_bytes()).unwrap(),
-            &target_url,
-        );
-
-        // Copy headers
-        for (name, value) in &parts.headers {
-            if name != "host" && name != "content-length" {
-                req_builder = req_builder.header(name, value);
-            }
-        }
-
-        // Set host header
-        if let Ok(url) = url::Url::parse(&state.profile.target_base_url) {
-            if let Some(host) = url.host_str() {
-                req_builder = req_builder.header("host", host);
-            }
-        }
-
-        req_builder = req_builder.body(body_bytes.clone());
-
-        // Send request
-        match req_builder.send().await {
-            Ok(response) => {
-                let status = response.status();
-                let should_retry = state.profile.retry_status_codes.contains(&status.as_u16());
-
-                if should_retry && attempt < max_retries {
-                    attempt += 1;
-                    let _ = state.log_sender.send(LogEntry {
-                        timestamp: chrono::Local::now().to_rfc3339(),
-                        level: "WARN".to_string(),
-                        message: format!(
-                            "Retry {}/{}: {} {}",
-                            attempt, max_retries, status, target_url
-                        ),
-                        details: Some(serde_json::json!({
-                            "type": "retry",
-                            "attempt": attempt,
-                            "max_retries": max_retries,
-                            "status": status.as_u16(),
-                        })),
-                    });
-
-                    // Update stats
-                    state.stats.record_retry();
-
-                    tokio::time::sleep(Duration::from_millis(state.profile.retry_delay_ms)).await;
-                    continue;
-                }
-
-                // Extract response headers
-                let resp_headers: serde_json::Map<String, serde_json::Value> = response
-                    .headers()
-                    .iter()
-                    .filter_map(|(k, v)| {
-                        v.to_str()
-                            .ok()
-                            .map(|s| (k.to_string(), serde_json::Value::String(s.to_string())))
-                    })
-                    .collect();
-
-                // Forward response
-                let mut response_builder = Response::builder().status(status);
-                for (name, value) in response.headers() {
-                    response_builder = response_builder.header(name, value);
-                }
-
-                let resp_body = response.bytes().await.unwrap_or_default();
-
-                // Log response with details
-                let _ = state.log_sender.send(LogEntry {
-                    timestamp: chrono::Local::now().to_rfc3339(),
-                    level: if status.is_success() { "INFO" } else { "WARN" }.to_string(),
-                    message: format!("<<< {} {} (attempt {})", status, path, attempt + 1),
-                    details: Some(serde_json::json!({
-                        "type": "response",
-                        "status": status.as_u16(),
-                        "headers": resp_headers,
-                        "body": format_body(&resp_body, 2000),
-                        "size": resp_body.len(),
-                        "attempt": attempt + 1,
-                    })),
-                });
-
-                // Update stats
-                state.stats.record_success();
-
-                return response_builder
-                    .body(Body::from(resp_body))
-                    .unwrap()
-                    .into_response();
-            }
-            Err(e) => {
-                let should_retry = e.is_timeout() || e.is_connect();
-
-                if should_retry && attempt < max_retries {
-                    attempt += 1;
-                    let _ = state.log_sender.send(LogEntry {
-                        timestamp: chrono::Local::now().to_rfc3339(),
-                        level: "WARN".to_string(),
-                        message: format!("Retry {}/{}: {}", attempt, max_retries, e),
-                        details: Some(serde_json::json!({
-                            "type": "retry_error",
-                            "attempt": attempt,
-                            "max_retries": max_retries,
-                            "error": e.to_string(),
-                        })),
-                    });
-
-                    state.stats.record_retry();
-                    tokio::time::sleep(Duration::from_millis(state.profile.retry_delay_ms)).await;
-                    continue;
-                }
-
-                // Log error
-                let _ = state.log_sender.send(LogEntry {
-                    timestamp: chrono::Local::now().to_rfc3339(),
-                    level: "ERROR".to_string(),
-                    message: format!("<<< Request failed: {}", e),
-                    details: Some(serde_json::json!({
-                        "type": "error",
-                        "error": e.to_string(),
-                        "attempt": attempt + 1,
-                    })),
-                });
-
-                state.stats.record_failure();
-
-                return (StatusCode::BAD_GATEWAY, format!("Proxy error: {}", e)).into_response();
-            }
-        }
+fn timeout_duration(timeout_ms: u64) -> Option<Duration> {
+    if timeout_ms > 0 {
+        Some(Duration::from_millis(timeout_ms))
+    } else {
+        None
     }
 }
 
-/// Handle streaming (SSE) request with pre-read body
-async fn handle_streaming_request_with_body(
-    state: std::sync::Arc<ProxyState>,
-    parts: axum::http::request::Parts,
-    body_bytes: axum::body::Bytes,
-    target_url: String,
-    method: Method,
-    path: String,
-) -> Response {
-    // Extract request headers
-    let req_headers: serde_json::Map<String, serde_json::Value> = parts
-        .headers
-        .iter()
-        .filter_map(|(k, v)| {
-            v.to_str()
-                .ok()
-                .map(|s| (k.to_string(), serde_json::Value::String(s.to_string())))
-        })
-        .collect();
+fn create_client() -> Client {
+    Client::builder().build().unwrap()
+}
 
-    // Log incoming streaming request
-    let _ = state.log_sender.send(LogEntry {
-        timestamp: chrono::Local::now().to_rfc3339(),
-        level: "INFO".to_string(),
-        message: format!(">>> {} {} [STREAMING]", method, path),
-        details: Some(serde_json::json!({
-            "type": "request",
-            "method": method.to_string(),
-            "path": path,
-            "target": target_url,
-            "headers": req_headers,
-            "body": format_body(&body_bytes, 2000),
-        })),
-    });
+fn build_request(
+    client: &Client,
+    state: &std::sync::Arc<ProxyState>,
+    request_template: &RequestTemplate,
+    target_url: &str,
+) -> reqwest::RequestBuilder {
+    let mut req_builder = client.request(request_template.method(), target_url);
 
-    // Create HTTP client with no timeout for streaming
-    let client = Client::builder()
-        .timeout(Duration::from_secs(300))
-        .build()
-        .unwrap();
-
-    // Build request
-    let mut req_builder = client.request(
-        Method::from_bytes(parts.method.as_str().as_bytes()).unwrap(),
-        &target_url,
-    );
-
-    // Copy headers
-    for (name, value) in &parts.headers {
+    for (name, value) in &request_template.headers {
         if name != "host" && name != "content-length" {
             req_builder = req_builder.header(name, value);
         }
@@ -342,58 +190,571 @@ async fn handle_streaming_request_with_body(
         }
     }
 
-    req_builder = req_builder.body(body_bytes);
+    req_builder.body(request_template.body_bytes.clone())
+}
 
-    match req_builder.send().await {
-        Ok(response) => {
-            let status = response.status();
+fn request_headers_for_log(
+    request_template: &RequestTemplate,
+) -> serde_json::Map<String, serde_json::Value> {
+    request_template
+        .headers
+        .iter()
+        .filter_map(|(k, v)| {
+            v.to_str()
+                .ok()
+                .map(|s| (k.to_string(), serde_json::Value::String(s.to_string())))
+        })
+        .collect()
+}
 
-            // Log streaming response start
-            let _ = state.log_sender.send(LogEntry {
-                timestamp: chrono::Local::now().to_rfc3339(),
-                level: "INFO".to_string(),
-                message: format!("<<< {} {} [STREAMING STARTED]", status, path),
-                details: Some(serde_json::json!({
-                    "type": "streaming_start",
-                    "status": status.as_u16(),
-                })),
-            });
+fn response_headers_for_log(headers: &HeaderMap) -> serde_json::Map<String, serde_json::Value> {
+    headers
+        .iter()
+        .filter_map(|(k, v)| {
+            v.to_str()
+                .ok()
+                .map(|s| (k.to_string(), serde_json::Value::String(s.to_string())))
+        })
+        .collect()
+}
 
-            // Build response with all original headers
-            let mut response_builder = Response::builder().status(status);
+fn clone_reqwest_headers(headers: &reqwest::header::HeaderMap) -> HeaderMap {
+    let mut result = HeaderMap::new();
+    for (name, value) in headers {
+        result.append(name, value.clone());
+    }
+    result
+}
 
-            // Copy all response headers from upstream
-            for (name, value) in response.headers() {
-                response_builder = response_builder.header(name, value);
-            }
+fn log_request(
+    state: &std::sync::Arc<ProxyState>,
+    request_template: &RequestTemplate,
+    method: &Method,
+    path: &str,
+    target_url: &str,
+    streaming: bool,
+) {
+    let message = if streaming {
+        format!(">>> {} {} [STREAMING]", method, path)
+    } else {
+        format!(">>> {} {}", method, path)
+    };
 
-            // Create streaming body
-            let stream = response.bytes_stream().map(|result| match result {
-                Ok(bytes) => Ok(bytes),
-                Err(e) => Err(std::io::Error::other(e)),
-            });
+    let _ = state.log_sender.send(LogEntry {
+        timestamp: chrono::Local::now().to_rfc3339(),
+        level: "INFO".to_string(),
+        message,
+        details: Some(serde_json::json!({
+            "type": "request",
+            "method": method.to_string(),
+            "path": path,
+            "target": target_url,
+            "headers": request_headers_for_log(request_template),
+            "body": format_body(&request_template.body_bytes, 2000),
+        })),
+    });
+}
 
-            state.stats.record_success();
+async fn log_retry(
+    state: &std::sync::Arc<ProxyState>,
+    reason: RetryReason,
+    attempt: u32,
+    max_retries: u32,
+    context: RetryLogContext<'_>,
+) {
+    let mut details = serde_json::json!({
+        "type": reason.detail_type(),
+        "attempt": attempt,
+        "maxRetries": max_retries,
+        "path": context.path,
+        "target": context.target_url,
+    });
 
-            response_builder
-                .body(Body::from_stream(stream))
-                .unwrap()
-                .into_response()
+    if let RetryReason::StatusCode(status) = reason {
+        details["status"] = serde_json::json!(status);
+    }
+
+    if let Some(timeout_ms) = context.timeout_ms {
+        details["timeoutMs"] = serde_json::json!(timeout_ms);
+    }
+
+    if let Some(error) = context.error {
+        details["error"] = serde_json::json!(error);
+    }
+
+    let _ = state.log_sender.send(LogEntry {
+        timestamp: chrono::Local::now().to_rfc3339(),
+        level: "WARN".to_string(),
+        message: format!(
+            "Retry {}/{}: {} {}",
+            attempt,
+            max_retries,
+            reason.label(),
+            context.target_url
+        ),
+        details: Some(details),
+    });
+
+    state.stats.record_retry();
+    tokio::time::sleep(Duration::from_millis(state.profile.retry_delay_ms)).await;
+}
+
+async fn log_final_error(state: &std::sync::Arc<ProxyState>, reason: RetryReason, attempt: u32) {
+    let _ = state.log_sender.send(LogEntry {
+        timestamp: chrono::Local::now().to_rfc3339(),
+        level: "ERROR".to_string(),
+        message: format!("<<< Request failed: {}", reason.label()),
+        details: Some(serde_json::json!({
+            "type": "error",
+            "reason": reason.detail_type(),
+            "attempt": attempt,
+        })),
+    });
+}
+
+async fn send_upstream_request(
+    client: &Client,
+    state: &std::sync::Arc<ProxyState>,
+    request_template: &RequestTemplate,
+    target_url: &str,
+) -> Result<reqwest::Response, RetryReason> {
+    let send_future = build_request(client, state, request_template, target_url).send();
+
+    if let Some(timeout) = timeout_duration(state.profile.first_byte_timeout_ms) {
+        match tokio::time::timeout(timeout, send_future).await {
+            Ok(Ok(response)) => Ok(response),
+            Ok(Err(_)) => Err(RetryReason::TransportError),
+            Err(_) => Err(RetryReason::FirstByteTimeout),
         }
-        Err(e) => {
-            let _ = state.log_sender.send(LogEntry {
-                timestamp: chrono::Local::now().to_rfc3339(),
-                level: "ERROR".to_string(),
-                message: format!("Streaming request failed: {}", e),
-                details: Some(serde_json::json!({
-                    "type": "error",
-                    "error": e.to_string(),
-                })),
-            });
+    } else {
+        send_future.await.map_err(|_| RetryReason::TransportError)
+    }
+}
 
-            state.stats.record_failure();
+async fn read_regular_body(
+    response: reqwest::Response,
+    full_response_timeout_ms: u64,
+) -> Result<Bytes, RetryReason> {
+    let body_future = response.bytes();
 
-            (StatusCode::BAD_GATEWAY, format!("Proxy error: {}", e)).into_response()
+    if let Some(timeout) = timeout_duration(full_response_timeout_ms) {
+        match tokio::time::timeout(timeout, body_future).await {
+            Ok(Ok(body)) => Ok(body),
+            Ok(Err(_)) => Err(RetryReason::TransportError),
+            Err(_) => Err(RetryReason::FullResponseTimeout),
+        }
+    } else {
+        body_future.await.map_err(|_| RetryReason::TransportError)
+    }
+}
+
+async fn open_stream_session(
+    client: &Client,
+    state: &std::sync::Arc<ProxyState>,
+    request_template: &RequestTemplate,
+    target_url: &str,
+) -> Result<StreamSession, RetryReason> {
+    let response = send_upstream_request(client, state, request_template, target_url).await?;
+    let status = response.status();
+    let headers = clone_reqwest_headers(response.headers());
+    let mut stream = Box::pin(response.bytes_stream()) as UpstreamByteStream;
+    let first_chunk_future = stream.next();
+
+    let first_chunk = if let Some(timeout) = timeout_duration(state.profile.first_byte_timeout_ms) {
+        match tokio::time::timeout(timeout, first_chunk_future).await {
+            Ok(Some(Ok(chunk))) => chunk,
+            Ok(Some(Err(_))) | Ok(None) => return Err(RetryReason::TransportError),
+            Err(_) => return Err(RetryReason::FirstByteTimeout),
+        }
+    } else {
+        match first_chunk_future.await {
+            Some(Ok(chunk)) => chunk,
+            Some(Err(_)) | None => return Err(RetryReason::TransportError),
+        }
+    };
+
+    Ok(StreamSession {
+        status,
+        headers,
+        first_chunk,
+        stream,
+    })
+}
+
+async fn handle_regular_request_with_body(
+    state: std::sync::Arc<ProxyState>,
+    request_template: RequestTemplate,
+    target_url: String,
+    method: Method,
+    path: String,
+) -> Response {
+    log_request(
+        &state,
+        &request_template,
+        &method,
+        &path,
+        &target_url,
+        false,
+    );
+
+    let client = create_client();
+    let max_retries = state.profile.max_retries;
+    let mut attempt = 0;
+
+    loop {
+        match send_upstream_request(&client, &state, &request_template, &target_url).await {
+            Ok(response) => {
+                let status = response.status();
+                if state.profile.retry_status_codes.contains(&status.as_u16())
+                    && attempt < max_retries
+                {
+                    attempt += 1;
+                    log_retry(
+                        &state,
+                        RetryReason::StatusCode(status.as_u16()),
+                        attempt,
+                        max_retries,
+                        RetryLogContext {
+                            path: &path,
+                            target_url: &target_url,
+                            timeout_ms: None,
+                            error: None,
+                        },
+                    )
+                    .await;
+                    continue;
+                }
+
+                let headers = clone_reqwest_headers(response.headers());
+                let header_log = response_headers_for_log(&headers);
+                let mut response_builder = Response::builder().status(status);
+                for (name, value) in &headers {
+                    response_builder = response_builder.header(name, value);
+                }
+
+                match read_regular_body(response, state.profile.full_response_timeout_ms).await {
+                    Ok(resp_body) => {
+                        let _ = state.log_sender.send(LogEntry {
+                            timestamp: chrono::Local::now().to_rfc3339(),
+                            level: if status.is_success() { "INFO" } else { "WARN" }.to_string(),
+                            message: format!("<<< {} {} (attempt {})", status, path, attempt + 1),
+                            details: Some(serde_json::json!({
+                                "type": "response",
+                                "status": status.as_u16(),
+                                "headers": header_log,
+                                "body": format_body(&resp_body, 2000),
+                                "size": resp_body.len(),
+                                "attempt": attempt + 1,
+                            })),
+                        });
+
+                        state.stats.record_success();
+
+                        return response_builder
+                            .body(Body::from(resp_body))
+                            .unwrap()
+                            .into_response();
+                    }
+                    Err(reason) if attempt < max_retries => {
+                        attempt += 1;
+                        let timeout_ms = match reason {
+                            RetryReason::FullResponseTimeout => {
+                                Some(state.profile.full_response_timeout_ms)
+                            }
+                            _ => None,
+                        };
+                        log_retry(
+                            &state,
+                            reason,
+                            attempt,
+                            max_retries,
+                            RetryLogContext {
+                                path: &path,
+                                target_url: &target_url,
+                                timeout_ms,
+                                error: None,
+                            },
+                        )
+                        .await;
+                    }
+                    Err(reason) => {
+                        log_final_error(&state, reason, attempt + 1).await;
+                        state.stats.record_failure();
+                        return (
+                            StatusCode::BAD_GATEWAY,
+                            format!("Proxy error: {}", reason.label()),
+                        )
+                            .into_response();
+                    }
+                }
+            }
+            Err(reason) if attempt < max_retries => {
+                attempt += 1;
+                let timeout_ms = match reason {
+                    RetryReason::FirstByteTimeout => Some(state.profile.first_byte_timeout_ms),
+                    _ => None,
+                };
+                log_retry(
+                    &state,
+                    reason,
+                    attempt,
+                    max_retries,
+                    RetryLogContext {
+                        path: &path,
+                        target_url: &target_url,
+                        timeout_ms,
+                        error: None,
+                    },
+                )
+                .await;
+            }
+            Err(reason) => {
+                log_final_error(&state, reason, attempt + 1).await;
+                state.stats.record_failure();
+                return (
+                    StatusCode::BAD_GATEWAY,
+                    format!("Proxy error: {}", reason.label()),
+                )
+                    .into_response();
+            }
         }
     }
+}
+
+async fn handle_streaming_request_with_body(
+    state: std::sync::Arc<ProxyState>,
+    request_template: RequestTemplate,
+    target_url: String,
+    method: Method,
+    path: String,
+) -> Response {
+    log_request(&state, &request_template, &method, &path, &target_url, true);
+
+    let client = create_client();
+    let max_retries = state.profile.max_retries;
+    let mut attempt = 0;
+
+    let initial_session = loop {
+        match open_stream_session(&client, &state, &request_template, &target_url).await {
+            Ok(session) => break session,
+            Err(reason) if attempt < max_retries => {
+                attempt += 1;
+                let timeout_ms = match reason {
+                    RetryReason::FirstByteTimeout => Some(state.profile.first_byte_timeout_ms),
+                    _ => None,
+                };
+                log_retry(
+                    &state,
+                    reason,
+                    attempt,
+                    max_retries,
+                    RetryLogContext {
+                        path: &path,
+                        target_url: &target_url,
+                        timeout_ms,
+                        error: None,
+                    },
+                )
+                .await;
+            }
+            Err(reason) => {
+                let _ = state.log_sender.send(LogEntry {
+                    timestamp: chrono::Local::now().to_rfc3339(),
+                    level: "ERROR".to_string(),
+                    message: format!("Streaming request failed: {}", reason.label()),
+                    details: Some(serde_json::json!({
+                        "type": "error",
+                        "reason": reason.detail_type(),
+                        "attempt": attempt + 1,
+                    })),
+                });
+                state.stats.record_failure();
+                return (
+                    StatusCode::BAD_GATEWAY,
+                    format!("Proxy error: {}", reason.label()),
+                )
+                    .into_response();
+            }
+        }
+    };
+
+    let _ = state.log_sender.send(LogEntry {
+        timestamp: chrono::Local::now().to_rfc3339(),
+        level: "INFO".to_string(),
+        message: format!(
+            "<<< {} {} [STREAMING STARTED]",
+            initial_session.status, path
+        ),
+        details: Some(serde_json::json!({
+            "type": "streaming_start",
+            "status": initial_session.status.as_u16(),
+            "attempt": attempt + 1,
+        })),
+    });
+
+    let mut response_builder = Response::builder().status(initial_session.status);
+    for (name, value) in &initial_session.headers {
+        response_builder = response_builder.header(name, value);
+    }
+
+    let state_for_stream = state.clone();
+    let target_for_stream = target_url.clone();
+    let path_for_stream = path.clone();
+    let request_for_stream = request_template;
+    let stream_idle_timeout_ms = state.profile.stream_idle_timeout_ms;
+
+    let (tx, rx) = mpsc::channel::<Result<Bytes, io::Error>>(64);
+    tokio::spawn(async move {
+        let mut current_stream = initial_session.stream;
+        let mut idle_retry_count = 0;
+
+        if tx.send(Ok(initial_session.first_chunk)).await.is_err() {
+            return;
+        }
+
+        loop {
+            let next_chunk = if let Some(timeout) = timeout_duration(stream_idle_timeout_ms) {
+                match tokio::time::timeout(timeout, current_stream.next()).await {
+                    Ok(chunk) => chunk,
+                    Err(_) => {
+                        if idle_retry_count >= max_retries {
+                            let _ = state_for_stream.log_sender.send(LogEntry {
+                                timestamp: chrono::Local::now().to_rfc3339(),
+                                level: "ERROR".to_string(),
+                                message: format!(
+                                    "Streaming request failed: {}",
+                                    RetryReason::StreamIdleTimeout.label()
+                                ),
+                                details: Some(serde_json::json!({
+                                    "type": "error",
+                                    "reason": RetryReason::StreamIdleTimeout.detail_type(),
+                                    "attempt": idle_retry_count + 1,
+                                })),
+                            });
+                            state_for_stream.stats.record_failure();
+                            let _ = tx
+                                .send(Err(io::Error::new(
+                                    io::ErrorKind::TimedOut,
+                                    RetryReason::StreamIdleTimeout.label(),
+                                )))
+                                .await;
+                            return;
+                        }
+
+                        idle_retry_count += 1;
+                        log_retry(
+                            &state_for_stream,
+                            RetryReason::StreamIdleTimeout,
+                            idle_retry_count,
+                            max_retries,
+                            RetryLogContext {
+                                path: &path_for_stream,
+                                target_url: &target_for_stream,
+                                timeout_ms: Some(stream_idle_timeout_ms),
+                                error: None,
+                            },
+                        )
+                        .await;
+
+                        match open_stream_session(
+                            &client,
+                            &state_for_stream,
+                            &request_for_stream,
+                            &target_for_stream,
+                        )
+                        .await
+                        {
+                            Ok(session) => {
+                                if tx.send(Ok(session.first_chunk)).await.is_err() {
+                                    return;
+                                }
+                                current_stream = session.stream;
+                                continue;
+                            }
+                            Err(reason) if idle_retry_count < max_retries => {
+                                let timeout_ms = match reason {
+                                    RetryReason::FirstByteTimeout => {
+                                        Some(state_for_stream.profile.first_byte_timeout_ms)
+                                    }
+                                    _ => None,
+                                };
+                                log_retry(
+                                    &state_for_stream,
+                                    reason,
+                                    idle_retry_count,
+                                    max_retries,
+                                    RetryLogContext {
+                                        path: &path_for_stream,
+                                        target_url: &target_for_stream,
+                                        timeout_ms,
+                                        error: None,
+                                    },
+                                )
+                                .await;
+                                continue;
+                            }
+                            Err(reason) => {
+                                let _ = state_for_stream.log_sender.send(LogEntry {
+                                    timestamp: chrono::Local::now().to_rfc3339(),
+                                    level: "ERROR".to_string(),
+                                    message: format!(
+                                        "Streaming request failed: {}",
+                                        reason.label()
+                                    ),
+                                    details: Some(serde_json::json!({
+                                        "type": "error",
+                                        "reason": reason.detail_type(),
+                                        "attempt": idle_retry_count + 1,
+                                    })),
+                                });
+                                state_for_stream.stats.record_failure();
+                                let _ = tx.send(Err(io::Error::other(reason.label()))).await;
+                                return;
+                            }
+                        }
+                    }
+                }
+            } else {
+                current_stream.next().await
+            };
+
+            match next_chunk {
+                Some(Ok(chunk)) => {
+                    if tx.send(Ok(chunk)).await.is_err() {
+                        return;
+                    }
+                }
+                Some(Err(_)) => {
+                    let _ = state_for_stream.log_sender.send(LogEntry {
+                        timestamp: chrono::Local::now().to_rfc3339(),
+                        level: "ERROR".to_string(),
+                        message: format!(
+                            "Streaming request failed: {}",
+                            RetryReason::TransportError.label()
+                        ),
+                        details: Some(serde_json::json!({
+                            "type": "error",
+                            "reason": RetryReason::TransportError.detail_type(),
+                        })),
+                    });
+                    state_for_stream.stats.record_failure();
+                    let _ = tx
+                        .send(Err(io::Error::other(RetryReason::TransportError.label())))
+                        .await;
+                    return;
+                }
+                None => {
+                    state_for_stream.stats.record_success();
+                    return;
+                }
+            }
+        }
+    });
+
+    let output_stream = ReceiverStream::new(rx);
+
+    response_builder
+        .body(Body::from_stream(output_stream))
+        .unwrap()
+        .into_response()
 }
