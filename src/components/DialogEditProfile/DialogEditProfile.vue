@@ -9,60 +9,62 @@
         <h3 class="modal-title">
           {{ isEditMode ? '编辑方案' : '新建方案' }}
         </h3>
-        <!-- 配置表单 -->
-        <div class="config-form">
-          <BaseInput v-model="formData.name" label="方案名称" placeholder="输入方案名称" />
-          <BaseInput
-            v-model.number="formData.local_port"
-            label="本地端口"
-            type="number"
-            placeholder="3000"
-          />
-          <BaseInput
-            v-model="formData.target_base_url"
-            label="目标接口地址"
-            placeholder="https://api.example.com/v1"
-          />
-          <!-- 表单行：最大重试次数 & 重试延迟 -->
-          <div class="form-row">
+        <!-- 配置表单（可滚动内容区） -->
+        <div class="modal-body">
+          <div class="config-form">
+            <BaseInput v-model="formData.name" label="方案名称" placeholder="输入方案名称" />
             <BaseInput
-              v-model.number="formData.max_retries"
-              label="最大重试次数"
+              v-model.number="formData.local_port"
+              label="本地端口"
               type="number"
-              placeholder="3"
+              placeholder="3000"
             />
             <BaseInput
-              v-model.number="formData.retry_delay_ms"
-              label="重试延迟 (ms)"
-              type="number"
-              placeholder="1000"
+              v-model="formData.target_base_url"
+              label="目标接口地址"
+              placeholder="https://api.example.com/v1"
             />
-          </div>
-          <div class="form-row">
+            <!-- 表单行：最大重试次数 & 重试延迟 -->
+            <div class="form-row">
+              <BaseInput
+                v-model.number="formData.max_retries"
+                label="最大重试次数"
+                type="number"
+                placeholder="3"
+              />
+              <BaseInput
+                v-model.number="formData.retry_delay_ms"
+                label="重试延迟 (ms)"
+                type="number"
+                placeholder="1000"
+              />
+            </div>
+            <div class="form-row">
+              <BaseInput
+                v-model.number="formData.first_byte_timeout_ms"
+                label="首个响应字节超时 (ms)"
+                type="number"
+                placeholder="0"
+              />
+              <BaseInput
+                v-model.number="formData.full_response_timeout_ms"
+                label="完整响应超时 (ms)"
+                type="number"
+                placeholder="0"
+              />
+            </div>
             <BaseInput
-              v-model.number="formData.first_byte_timeout_ms"
-              label="首个响应字节超时 (ms)"
+              v-model.number="formData.stream_idle_timeout_ms"
+              label="流式响应空闲超时 (ms)"
               type="number"
               placeholder="0"
             />
             <BaseInput
-              v-model.number="formData.full_response_timeout_ms"
-              label="完整响应超时 (ms)"
-              type="number"
-              placeholder="0"
+              v-model="retryCodesText"
+              label="重试状态码 (逗号分隔)"
+              placeholder="429,500,502,503,504"
             />
           </div>
-          <BaseInput
-            v-model.number="formData.stream_idle_timeout_ms"
-            label="流式响应空闲超时 (ms)"
-            type="number"
-            placeholder="0"
-          />
-          <BaseInput
-            v-model="retryCodesText"
-            label="重试状态码 (逗号分隔)"
-            placeholder="429,500,502,503,504"
-          />
         </div>
         <!-- 操作按钮组 -->
         <div class="modal-actions">
@@ -236,6 +238,9 @@ function handleDelete() {
   padding: var(--spacing-lg);
   width: 400px;
   max-width: 90%;
+  max-height: 85vh;
+  display: flex;
+  flex-direction: column;
 
   &.modal-large {
     width: 500px;
@@ -248,6 +253,15 @@ function handleDelete() {
   font-size: var(--font-xl);
   font-weight: 600;
   margin: 0 0 var(--spacing-md) 0;
+  flex-shrink: 0;
+}
+
+/* 可滚动内容区 */
+.modal-body {
+  flex: 1;
+  overflow-y: auto;
+  margin: 0 -var(--spacing-lg);
+  padding: 0 var(--spacing-lg);
 }
 
 /* 配置表单 */
@@ -270,5 +284,6 @@ function handleDelete() {
   justify-content: flex-end;
   gap: var(--spacing-md);
   margin-top: var(--spacing-lg);
+  flex-shrink: 0;
 }
 </style>
