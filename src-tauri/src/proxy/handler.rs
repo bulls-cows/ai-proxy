@@ -61,8 +61,8 @@ impl RequestTemplate {
         }
     }
 
-    fn method(&self) -> Method {
-        Method::from_bytes(self.method.as_str().as_bytes()).unwrap()
+    fn method(&self) -> &Method {
+        &self.method
     }
 }
 
@@ -176,7 +176,7 @@ fn build_request(
     request_template: &RequestTemplate,
     target_url: &str,
 ) -> reqwest::RequestBuilder {
-    let mut req_builder = client.request(request_template.method(), target_url);
+    let mut req_builder = client.request(request_template.method().clone(), target_url);
 
     for (name, value) in &request_template.headers {
         if name != "host" && name != "content-length" {
@@ -356,6 +356,12 @@ async fn open_stream_session(
 ) -> Result<StreamSession, RetryReason> {
     let response = send_upstream_request(client, state, request_template, target_url).await?;
     let status = response.status();
+
+    // Check if status code requires retry
+    if state.profile.retry_status_codes.contains(&status.as_u16()) {
+        return Err(RetryReason::StatusCode(status.as_u16()));
+    }
+
     let headers = clone_reqwest_headers(response.headers());
     let mut stream = Box::pin(response.bytes_stream()) as UpstreamByteStream;
     let first_chunk_future = stream.next();
@@ -666,12 +672,23 @@ async fn handle_streaming_request_with_body(
                         {
                             Ok(session) => {
                                 if tx.send(Ok(session.first_chunk)).await.is_err() {
+                                    let _ = state_for_stream.log_sender.send(LogEntry {
+                                        timestamp: chrono::Local::now().to_rfc3339(),
+                                        level: "ERROR".to_string(),
+                                        message: "Streaming client disconnected".to_string(),
+                                        details: Some(serde_json::json!({
+                                            "type": "error",
+                                            "reason": "client_disconnected",
+                                        })),
+                                    });
+                                    state_for_stream.stats.record_failure();
                                     return;
                                 }
                                 current_stream = session.stream;
                                 continue;
                             }
                             Err(reason) if idle_retry_count < max_retries => {
+                                idle_retry_count += 1;
                                 let timeout_ms = match reason {
                                     RetryReason::FirstByteTimeout => {
                                         Some(state_for_stream.profile.first_byte_timeout_ms)
