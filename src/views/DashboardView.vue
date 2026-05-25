@@ -121,10 +121,18 @@
           <!-- 操作按钮组 -->
           <div class="status-actions">
             <!-- 条件: 根据代理状态显示启动/停止按钮 -->
-            <BaseButton v-if="proxyStore.status === 'stopped'" type="primary" @click="onStartProxy">
+            <BaseButton
+              v-if="proxyStore.status === 'stopped'"
+              type="primary"
+              :loading="startingProxy"
+              :disabled="startingProxy"
+              @click="onStartProxy"
+            >
               启动服务
             </BaseButton>
-            <BaseButton v-else type="danger" @click="onStopProxy"> 停止服务 </BaseButton>
+            <BaseButton v-else :loading="stoppingProxy" type="danger" @click="onStopProxy">
+              停止服务
+            </BaseButton>
           </div>
         </template>
         <!-- 条件: 无配置方案时显示空状态 -->
@@ -146,6 +154,11 @@
 
     <!-- Toast 提示 -->
     <BaseToast :message="toastMessage" :visible="toastVisible" />
+
+    <!-- 错误提示 -->
+    <div v-if="proxyStore.error" class="proxy-error">
+      {{ proxyStore.error }}
+    </div>
   </div>
 </template>
 
@@ -202,6 +215,8 @@ const activeProfileId = ref<string>('')
 const copied = ref(false)
 const toastVisible = ref(false)
 const toastMessage = ref('')
+const startingProxy = ref(false)
+const stoppingProxy = ref(false)
 
 // 计算属性
 const activeProfile = computed(() => configStore.activeProfile)
@@ -248,14 +263,46 @@ watch(
  * 启动代理服务
  */
 async function onStartProxy() {
-  await proxyStore.start()
+  startingProxy.value = true
+  try {
+    await proxyStore.start()
+    toastMessage.value = '服务启动成功'
+    toastVisible.value = true
+    setTimeout(() => {
+      toastVisible.value = false
+    }, 2000)
+  } catch (err) {
+    toastMessage.value = proxyStore.error ?? String(err)
+    toastVisible.value = true
+    setTimeout(() => {
+      toastVisible.value = false
+    }, 3000)
+  } finally {
+    startingProxy.value = false
+  }
 }
 
 /**
  * 停止代理服务
  */
 async function onStopProxy() {
-  await proxyStore.stop()
+  stoppingProxy.value = true
+  try {
+    await proxyStore.stop()
+    toastMessage.value = '服务已停止'
+    toastVisible.value = true
+    setTimeout(() => {
+      toastVisible.value = false
+    }, 2000)
+  } catch (err) {
+    toastMessage.value = proxyStore.error ?? String(err)
+    toastVisible.value = true
+    setTimeout(() => {
+      toastVisible.value = false
+    }, 3000)
+  } finally {
+    stoppingProxy.value = false
+  }
 }
 
 /**
@@ -327,6 +374,17 @@ onMounted(async () => {
   &__status-card {
     margin-bottom: var(--spacing-lg);
   }
+}
+
+.proxy-error {
+  margin-top: -8px;
+  margin-bottom: var(--spacing-lg);
+  padding: 10px 12px;
+  border-radius: var(--radius-md);
+  background: rgba(245, 108, 108, 0.1);
+  color: var(--color-danger);
+  font-size: var(--font-sm);
+  border: 1px solid rgba(245, 108, 108, 0.2);
 }
 
 .card-header-content {

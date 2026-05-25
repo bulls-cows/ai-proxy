@@ -68,6 +68,7 @@ export const useProxyStore = defineStore('proxy', () => {
       status.value = 'running'
     } catch (e) {
       error.value = String(e)
+      throw e
     }
   }
 
@@ -82,6 +83,7 @@ export const useProxyStore = defineStore('proxy', () => {
       port.value = null
     } catch (e) {
       error.value = String(e)
+      throw e
     }
   }
 
