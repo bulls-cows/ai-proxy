@@ -45,16 +45,24 @@ export const useProxyStore = defineStore('proxy', () => {
   async function setupListeners() {
     // Listen for log events
     unlistenLog = await listen<LogEntry>('proxy-log', event => {
-      logs.value.push(event.payload)
-      // Keep only last 1000 logs
-      if (logs.value.length > 1000) {
-        logs.value = logs.value.slice(-1000)
+      try {
+        logs.value.push(event.payload)
+        // Keep only last 1000 logs
+        if (logs.value.length > 1000) {
+          logs.value = logs.value.slice(-1000)
+        }
+      } catch (e) {
+        console.error('Failed to process proxy log:', e)
       }
     })
 
     // Listen for status events
     unlistenStatus = await listen<string>('proxy-status', event => {
-      status.value = event.payload as 'running' | 'stopped'
+      try {
+        status.value = event.payload as 'running' | 'stopped'
+      } catch (e) {
+        console.error('Failed to process proxy status:', e)
+      }
     })
   }
 

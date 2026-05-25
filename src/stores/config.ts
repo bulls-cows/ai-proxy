@@ -112,11 +112,13 @@ export const useConfigStore = defineStore('config', () => {
    * @param profile - 配置方案数据
    */
   async function updateProfile(profile: ProxyProfile) {
+    const backup = config.value
     try {
       await updateProfileApi(profile)
       await loadConfig()
     } catch (e) {
       error.value = String(e)
+      config.value = backup
     }
   }
 
@@ -125,11 +127,13 @@ export const useConfigStore = defineStore('config', () => {
    * @param id - 配置方案ID
    */
   async function deleteProfile(id: string) {
+    const backup = config.value
     try {
       await deleteProfileApi(id)
       await loadConfig()
     } catch (e) {
       error.value = String(e)
+      config.value = backup
     }
   }
 
@@ -138,11 +142,13 @@ export const useConfigStore = defineStore('config', () => {
    * @param id - 配置方案ID
    */
   async function setActiveProfile(id: string) {
+    const backup = config.value
     try {
       await setActiveProfileApi(id)
       await loadConfig()
     } catch (e) {
       error.value = String(e)
+      config.value = backup
     }
   }
 

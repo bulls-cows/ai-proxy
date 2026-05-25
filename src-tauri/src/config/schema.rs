@@ -64,10 +64,8 @@ impl Config {
 
     /// Get mutable reference to the active profile
     pub fn active_profile_mut(&mut self) -> Option<&mut ProxyProfile> {
-        if let Some(id) = self.active_profile_id.clone() {
-            self.profiles.iter_mut().find(|p| p.id == id)
-        } else {
-            None
-        }
+        self.active_profile_id.as_ref().and_then(|id| {
+            self.profiles.iter_mut().find(|p| p.id == *id)
+        })
     }
 }
